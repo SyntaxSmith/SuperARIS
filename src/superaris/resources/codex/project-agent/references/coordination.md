@@ -56,6 +56,23 @@ budgets. A persistent author can continue; a fresh reviewer must still be fresh.
 Codex reviewing Codex records `review_independence: same-family` and
 `acceptance_status: provisional` where applicable.
 
+## Plan, execute, return
+
+Keep a short phase plan in the original task: the next bounded execution,
+its evidence, and when to return for a decision. For example, main delegates a
+pilot to engineer while writer develops competing hypotheses. Engineer returns
+commands, result/log pointers and the unresolved question; a contradicted core
+assumption, unavailable real interface or repeated blocker without new evidence
+calls for a `blocked` report, not endless preparation. Main reads the compact
+evidence, reuses unchanged validation and decides the next authorized phase;
+it may execute that phase itself. No fixed planner/executor model is required.
+
+For a bounded units/formula clarification, register the waiting writer as the
+handle's owner and engineer as its worker; return a `reply` through that handle.
+This does not transfer shared-file ownership or final acceptance. See the
+[clarification example](receipts.md#bounded-clarification). The read-only
+`superaris board PROJECT` shows these existing records; it does not dispatch work.
+
 ## Delegate an SSH experiment
 
 For an authorized remote experiment, give the existing engineer one concrete

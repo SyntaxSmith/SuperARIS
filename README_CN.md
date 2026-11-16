@@ -195,6 +195,7 @@ superaris
 
 - [Windows 安装与支持范围](docs/WINDOWS.md)
 - [工作台、角色与人工接手](docs/WORKBENCH.md)
+- [只读协作进度视图](docs/BOARD.md)：`superaris board 项目目录 --open`
 - [技能、上下文与恢复](docs/PROJECT_CONTEXT.md)
 - [主动跟进与项目记忆](docs/RESULTS_AND_MEMORY.md)
 - [ARIS 来源、依赖与更新](docs/DEPENDENCIES.md)

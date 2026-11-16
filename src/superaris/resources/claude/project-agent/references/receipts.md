@@ -87,6 +87,22 @@ wait and points to an existing evidence file. Neither declares scientific PASS.
 Keep the handle open while more evidence is expected. Do not blindly replay a
 write or paid model call after an uncertain delivery.
 
+## Bounded clarification
+
+For an existing bound writer and engineer, keep the question in an existing
+original record such as `notes/QUESTION.md`. The recipient need not be main:
+
+```bash
+superaris watch /path/to/project --id method-clarification --owner-role writer --worker-role engineer --record notes/QUESTION.md --deliverable outputs/engineer/UNITS.md --wait-for 'Units and aggregation clarification' --query 'Original engineering task and units note' --next 'Read the reply, update the method note within its scope and return unresolved decisions to main'
+superaris report /path/to/project --id method-clarification --outcome reply --message 'Units and aggregation are documented in outputs/engineer/UNITS.md'
+```
+
+A reply is evidence to read, not permission to change the project goal or claim
+acceptance. Existing input/unknown guards still apply. Use `superaris board
+/path/to/project` for the current recorded waits and latest reports, or append
+`--open` for its local read-only browser view. A blocked report hands evidence
+back for a decision; the board never restarts, reassigns or retries a worker.
+
 ## SSH results
 
 Use the original task record to make the remote execution and local receipt

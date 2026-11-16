@@ -193,6 +193,7 @@ The confirmed startup can install missing Herdr using its official Windows insta
 
 - [Windows setup and support scope](docs/WINDOWS.md)
 - [Workbench, roles, and human handoff](docs/WORKBENCH.md)
+- [Read-only collaboration progress board](docs/BOARD.md): `superaris board PROJECT --open`
 - [Skills, context, and recovery](docs/PROJECT_CONTEXT.md)
 - [Follow-up and project memory](docs/RESULTS_AND_MEMORY.md)
 - [ARIS source, dependencies, and updates](docs/DEPENDENCIES.md)

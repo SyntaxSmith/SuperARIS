@@ -148,9 +148,14 @@ def select_model(role: str, kind: str, previous: str | None) -> str | None:
         "codex": [("GPT-6.1 Sol", "gpt-6.1-sol")],
         "agy": [("Gemini 4 Argon High", "gemini-4-argon-high"),
                 ("Gemini 4 Carbon High", "gemini-4-carbon-high"),
-                ("Gemini 4 Hydrogen High", "gemini-4-hydrogen-high")],
+                ("Gemini 4 Hydrogen High", "gemini-4-hydrogen-high"),
+                ("Orchestrator (Carbon)", "gemini-pro-orchestrator"),
+                ("Orchestrator (Argon)", "gemini-pro-orchestrator-argon"),
+                ("Gemini 4 Hydrogen XHigh", "gemini-4-hydrogen-xhigh")],
     }.get(kind, [])
-    options = [tr("沿用已有设置"), tr("手动输入模型 ID")]
+    options = [tr("沿用已有设置"), tr("手动输入模型 ID 或原生名称")]
+    if kind == "agy":
+        print(tr("Orchestrator 在同一会话内协调规划与执行，不增加团队角色。"))
     options.extend(tr("{title}（可选型号）", title=title) for title, _ in shortcuts)
     default = next((index + 3 for index, (_, model) in enumerate(shortcuts) if model == previous),
                    2 if previous else 1)

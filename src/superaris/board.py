@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+import time
 from urllib.parse import urlsplit
 import webbrowser
 
@@ -111,7 +112,11 @@ def render(data: dict, language: str | None = None) -> str:
              "Project records (not a live process probe)" if en else "项目记录（未探活进程）"]
     for role in data["roles"]:
         lines += [f"\n{role['id']} · {role['harness']} · {role['requested_model'] or ('native settings' if en else '原生设置')}",
-                  str(role["task"] or "—")]
+                  str(role["task"] or "—"),
+                  f"{'Recorded delivery' if en else '投递记录'}: {role['delivery']} · "
+                  f"{'automation' if role['automation_owned'] else 'human'}"]
+        if role["pending_unknown"]:
+            lines.append("Delivery needs inspection" if en else "投递待核实")
     for task in data["tasks"]:
         state = ("waiting" if task["active"] else "wait closed") if en else ("等待中" if task["active"] else "等待已结束")
         lines += [f"\n[{task['id']}] {task['worker_role'] or 'external'} → {task['owner_role']} · {state}",
@@ -128,8 +133,109 @@ def render(data: dict, language: str | None = None) -> str:
     return "\n".join(lines)
 
 
+def terminal_overview(data: dict, language: str | None = None) -> str:
+    """Compact terminal layout; raw task text and original gates stay unchanged."""
+    import shutil
+    import unicodedata
+    en = (language or data["project"]["ui_language"]) == "en"
+    width = max(24, shutil.get_terminal_size((100, 30)).columns - 2)
+
+    def short(value, limit=100):
+        value = " ".join(str(value or "—").split())
+        # Recorded text is not a terminal control channel.
+        value = "".join(c for c in value if not unicodedata.category(c).startswith("C"))
+        used, result = 0, ""
+        for c in value:
+            used += 2 if unicodedata.east_asian_width(c) in {"W", "F"} else 1
+            if used > min(width, limit) - 1:
+                return result + "…"
+            result += c
+        return result
+
+    active = [task for task in data["tasks"] if task["active"]]
+    replies = sum(bool(t["reports"]) for t in active)
+    unknown = sum(t["pending_unknown"] for t in active) + sum(r["pending_unknown"] for r in data["roles"])
+    lines = [short("SuperARIS · " + data["project"]["name"]),
+             (f"{len(data['roles'])} roles · {len(active)} waits · {replies} with replies · {unknown} unknown"
+              if en else f"{len(data['roles'])} 角色 · {len(active)} 活跃等待 · {replies} 已回报 · {unknown} 投递待核"),
+             "─" * min(width, 78)]
+    for role in data["roles"]:
+        lines.append(short(f"{role['id']} · {role['harness']} · {role['requested_model'] or 'native'}"))
+        lines.append(short(f"  {role['delivery']} · {'automation' if role['automation_owned'] else 'human'}"))
+    for task in active:
+        lines += ["", short(f"{task['worker_role'] or 'external'} → {task['owner_role']}  [{task['id']}]"),
+                  short(("Waiting: " if en else "所等：") + str(task["wait_for"] or "—"))]
+        if task["reports"]:
+            report = task["reports"][-1]
+            lines.append(short(f"{report['outcome']} · {report['message']}"))
+            lines.append(short(str(report["time"])))
+        if task["pending_unknown"]:
+            lines.append("! Inspect unknown delivery" if en else "! 投递待核实")
+        lines.append(short(("Next: " if en else "下一步：") + str(task["next_authorized"] or "—")))
+    lines += ["", ("Saved records · reports need original acceptance · Ctrl+C closes view"
+                    if en else "项目记录 · 报告仍需原任务验收 · Ctrl+C 只退出视图")]
+    lines.extend(short(warning) for warning in data["warnings"])
+    return "\n".join(lines)
+
+
+def watch(project: Path, language: str | None = None) -> int:
+    """Foreground view only; refresh on material record changes, no project writes."""
+    previous = None
+    interactive = sys.stdout.isatty()
+    try:
+        while True:
+            data = collect(project)
+            material = {key: value for key, value in data.items() if key != "generated_at"}
+            if material != previous:
+                if interactive:
+                    print("\033[2J\033[H", end="")
+                print(terminal_overview(data, language), flush=True)
+                previous = material
+            time.sleep(2)
+    except KeyboardInterrupt:
+        return 0
+
+
+def open_tab(project: Path, binary: str = "herdr", language: str | None = None) -> dict:
+    """Create only a view tab, anchored to an existing verified project pane."""
+    from .client import Herdr, HerdrError, verify_owner
+    from .platform import command_line
+    from .state import read
+    project = project.expanduser().resolve()
+    bound = read(directory(project) / "launch.json", {})
+    if bound.get("host", "herdr") != "herdr":
+        raise ValueError("--tab is for existing Herdr teams; use --watch or --open for Orca")
+    main = bound.get("roles", {}).get("main", {})
+    if not bound.get("session") or not main.get("pane_id") or not main.get("pid"):
+        raise ValueError("No recorded project owner identity; use --watch or --open without starting a team")
+    client = Herdr(bound["session"], binary)
+    verify_owner(client, main, project)
+    pane = client.json("pane", "get", main["pane_id"])["pane"]
+    workspace = pane["workspace_id"]
+    if bound.get("workspace_id") and workspace != bound["workspace_id"]:
+        raise HerdrError("Recorded project workspace changed; inspect the original binding")
+    client.json("workspace", "get", workspace)  # Existing only; never ensure/install/start.
+    en = (language or bound.get("ui_language", "zh")) == "en"
+    created = client.json("tab", "create", "--workspace", workspace, "--cwd", str(project),
+                          "--label", "Collaboration progress" if en else "协作进度", "--no-focus")
+    target, tab = created["root_pane"]["pane_id"], created["tab"]["tab_id"]
+    argv = [sys.executable, "-m", "superaris", "board", str(project), "--watch"]
+    if language:
+        argv += ["--lang", language]
+    command = command_line(argv)
+    try:
+        client.run("pane", "run", target, command)
+    except HerdrError as exc:
+        raise HerdrError(f"Progress tab {tab}, pane {target} was created; command delivery is unknown. Inspect it before retrying. {exc}") from exc
+    return {"session": bound["session"], "workspace_id": workspace, "tab_id": tab,
+            "pane_id": target, "command": command, "admitted": True,
+            "note": "View command queued; original team and project records unchanged. Each --tab creates a new tab."}
+
+
 def create_server(project: Path, port: int = 0) -> ThreadingHTTPServer:
     project = project.expanduser().resolve()
+    if not 0 <= port <= 65535:
+        raise ValueError("Port must be between 0 and 65535")
     collect(project)  # Validate before binding; never creates project metadata.
 
     class Handler(BaseHTTPRequestHandler):
@@ -170,7 +276,10 @@ def serve(project: Path, port: int = 0, open_browser: bool = False, language: st
         print(f"SuperARIS board: {url}\nCtrl+C stops this read-only view; original team and receiver remain unchanged.", flush=True)
         if open_browser:
             if sys.platform == "darwin":
-                subprocess.Popen(["open", "-a", "Microsoft Edge", url])
+                opened = subprocess.run(["open", "-a", "Microsoft Edge", url],
+                                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+                if opened.returncode:
+                    webbrowser.open(url)
             else:
                 webbrowser.open(url)
         try:

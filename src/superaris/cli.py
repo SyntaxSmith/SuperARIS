@@ -113,6 +113,9 @@ def parser(prog: str = "superaris") -> argparse.ArgumentParser:
     display.add_argument("--json", action="store_true")
     display.add_argument("--serve", action="store_true", help="serve a read-only loopback view until Ctrl+C")
     display.add_argument("--open", action="store_true", help="serve and open the browser view")
+    display.add_argument("--watch", action="store_true", help="refresh the read-only terminal view until Ctrl+C")
+    display.add_argument("--tab", action="store_true", help="open a progress tab in the project's existing Herdr workspace")
+    board.add_argument("--herdr-bin", default="herdr", help="Herdr executable for --tab; no installation or server startup")
     board.add_argument("--port", type=int, default=0, help="loopback port (default: automatic)")
     board.add_argument("--lang", choices=["zh", "en"], help="view language; project preferences are unchanged")
     s = sub.add_parser("start", help="start or reconnect the selected project owners")
@@ -276,7 +279,12 @@ def main(argv: list[str] | None = None, *, prog: str = "superaris") -> int:
             if not project.is_dir():
                 raise ValueError("Selected project directory does not exist")
             if args.command == "board":
-                from .board import collect, render, serve
+                from .board import collect, open_tab, render, serve, watch
+                if args.tab:
+                    print(json.dumps(open_tab(project, args.herdr_bin, args.lang), ensure_ascii=False, indent=2))
+                    return 0
+                if args.watch:
+                    return watch(project, args.lang)
                 if args.serve or args.open:
                     return serve(project, args.port, args.open, args.lang)
                 data = collect(project)

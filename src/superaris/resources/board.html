@@ -1,0 +1,2395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SuperARIS · 协作进度</title>
+  <style>
+    :root {
+      --bg-canvas: #f4efe6;
+      --bg-canvas-top: #f7f3eb;
+      --bg-surface: #fbf8f3;
+      --bg-subtle: #efe9de;
+      --bg-inset: #e9e1d4;
+      --border-hairline: #ddd4c5;
+      --border-strong: #c9beab;
+      --ink-primary: #1e1b17;
+      --ink-secondary: #4d463e;
+      --ink-muted: #70675c;
+      --brand-bg: #dce2f4;
+      --brand-ink: #34447e;
+      --brand-border: #c2cce9;
+
+      /* Editorial, non-live semantic tones */
+      --wait-bg: #f4ecdd;
+      --wait-ink: #6b4d1e;
+      --wait-border: #dec9a4;
+
+      --check-bg: #e5eef3;
+      --check-ink: #274f63;
+      --check-border: #bfd3de;
+
+      --reply-bg: #e7efe9;
+      --reply-ink: #33543e;
+      --reply-border: #bfd2c4;
+
+      --warn-bg: #f7e7da;
+      --warn-ink: #8f4216;
+      --warn-border: #e3bfa3;
+
+      --block-bg: #f8e4e1;
+      --block-ink: #922d24;
+      --block-border: #e4bab4;
+
+      --neutral-bg: #ece6db;
+      --neutral-ink: #5a5248;
+      --neutral-border: #d5cdbf;
+
+      --shadow-card: 0 1px 2px rgba(36, 29, 20, 0.04), 0 4px 14px rgba(36, 29, 20, 0.03);
+      --radius-lg: 10px;
+      --radius-md: 7px;
+      --radius-sm: 5px;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+      --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-canvas);
+      background-image: linear-gradient(180deg, var(--bg-canvas-top) 0%, var(--bg-canvas) 220px);
+      color: var(--ink-primary);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    button {
+      font: inherit;
+      color: inherit;
+    }
+
+    .shell {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 12px 20px 36px;
+    }
+
+    /* Top Header */
+    .topbar {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-card);
+      padding: 10px 14px;
+      margin-bottom: 12px;
+    }
+
+    .topbar-main {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .brand-cluster {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      flex: 1 1 auto;
+      flex-wrap: wrap;
+    }
+
+    .sa-mark {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      background: var(--brand-bg);
+      border: 1px solid var(--brand-border);
+      color: var(--brand-ink);
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: 0.03em;
+      flex-shrink: 0;
+    }
+
+    .product-name {
+      font-weight: 650;
+      font-size: 14px;
+      color: var(--ink-secondary);
+      white-space: nowrap;
+    }
+
+    .board-badge {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 1px 7px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-hairline);
+      color: var(--ink-secondary);
+      white-space: nowrap;
+    }
+
+    .divider-dot {
+      color: var(--border-strong);
+      user-select: none;
+    }
+
+    .project-title {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--ink-primary);
+      letter-spacing: -0.01em;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .host-tag {
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 1px 7px;
+      border-radius: 999px;
+      background: var(--neutral-bg);
+      border: 1px solid var(--neutral-border);
+      color: var(--ink-secondary);
+      white-space: nowrap;
+    }
+
+    .controls-cluster {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-strong);
+      background: var(--bg-surface);
+      color: var(--ink-primary);
+      font-size: 12.5px;
+      font-weight: 550;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background-color 0.14s ease, border-color 0.14s ease;
+    }
+
+    .btn:hover {
+      background: var(--bg-subtle);
+    }
+
+    .btn:focus-visible, .lang-btn:focus-visible, .copy-chip:focus-visible, .filter-btn:focus-visible, .history-toggle:focus-visible, .role-jump:focus-visible {
+      outline: 2px solid var(--brand-ink);
+      outline-offset: 1px;
+    }
+
+    .btn[disabled] {
+      opacity: 0.65;
+      cursor: default;
+    }
+
+    .lang-switch {
+      display: inline-flex;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      background: var(--bg-subtle);
+    }
+
+    .lang-btn {
+      border: 0;
+      background: transparent;
+      padding: 4px 8px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ink-secondary);
+      cursor: pointer;
+    }
+
+    .lang-btn.active {
+      background: var(--ink-primary);
+      color: var(--bg-surface);
+    }
+
+    .topbar-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px 16px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border-hairline);
+      font-size: 12px;
+      color: var(--ink-muted);
+    }
+
+    .meta-left, .meta-right {
+      display: flex;
+      align-items: center;
+      gap: 6px 12px;
+      flex-wrap: wrap;
+      min-width: 0;
+    }
+
+    .tabular {
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Banners (only rendered when needed) */
+    .banner {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: var(--radius-md);
+      margin-bottom: 10px;
+      font-size: 12.5px;
+    }
+
+    .banner-conn {
+      background: var(--warn-bg);
+      border: 1px solid var(--warn-border);
+      color: var(--warn-ink);
+    }
+
+    .banner-warn {
+      background: var(--wait-bg);
+      border: 1px solid var(--wait-border);
+      color: var(--wait-ink);
+    }
+
+    .banner-list {
+      margin: 3px 0 0;
+      padding-left: 18px;
+    }
+
+    /* Mobile compact role jump bar */
+    .mobile-role-strip {
+      display: none;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+      margin-bottom: 10px;
+      scrollbar-width: thin;
+    }
+
+    .role-jump {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      border: 1px solid var(--border-hairline);
+      background: var(--bg-surface);
+      font-size: 12px;
+      color: var(--ink-primary);
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    /* Workspace Grid */
+    .workspace-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.65fr) minmax(320px, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+
+    .section-title {
+      margin: 0;
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--ink-primary);
+      letter-spacing: 0.01em;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .count-pill {
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 0 6px;
+      border-radius: 999px;
+      background: var(--bg-inset);
+      color: var(--ink-secondary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .filter-bar {
+      display: inline-flex;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+
+    .filter-btn {
+      border: 1px solid var(--border-hairline);
+      background: var(--bg-surface);
+      color: var(--ink-secondary);
+      border-radius: var(--radius-sm);
+      padding: 2px 8px;
+      font-size: 11.5px;
+      font-weight: 550;
+      cursor: pointer;
+    }
+
+    .filter-btn.active {
+      background: var(--bg-inset);
+      border-color: var(--border-strong);
+      color: var(--ink-primary);
+      font-weight: 650;
+    }
+
+    /* Cards & Subtle Arrival Highlight */
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-card);
+    }
+
+    @keyframes recordArrive {
+      0% { background-color: #f4e8ce; border-color: #cbb07c; }
+      100% { background-color: var(--bg-surface); border-color: var(--border-hairline); }
+    }
+
+    .just-updated {
+      animation: recordArrive 1.1s ease-out 1;
+    }
+
+    /* Pills */
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 1px 7px;
+      border-radius: var(--radius-sm);
+      font-size: 11.5px;
+      font-weight: 600;
+      line-height: 1.45;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+
+    .pill-wait { background: var(--wait-bg); color: var(--wait-ink); border-color: var(--wait-border); }
+    .pill-check { background: var(--check-bg); color: var(--check-ink); border-color: var(--check-border); }
+    .pill-reply { background: var(--reply-bg); color: var(--reply-ink); border-color: var(--reply-border); }
+    .pill-warn { background: var(--warn-bg); color: var(--warn-ink); border-color: var(--warn-border); }
+    .pill-block { background: var(--block-bg); color: var(--block-ink); border-color: var(--block-border); }
+    .pill-neutral { background: var(--neutral-bg); color: var(--neutral-ink); border-color: var(--neutral-border); }
+
+    /* Task List & Task Card */
+    .stack {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .sub-divider {
+      font-size: 12px;
+      font-weight: 650;
+      color: var(--ink-muted);
+      margin: 6px 0 2px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sub-divider::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--border-hairline);
+    }
+
+    .task-card {
+      padding: 12px 14px;
+    }
+
+    .task-card.is-closed {
+      background: #f8f4ed;
+    }
+
+    .task-card.has-unknown {
+      border-color: var(--warn-border);
+    }
+
+    .task-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 7px;
+    }
+
+    .relation-flow {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      font-size: 12.5px;
+    }
+
+    .actor-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 7px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-hairline);
+      font-weight: 650;
+      color: var(--ink-primary);
+    }
+
+    .actor-harness {
+      font-weight: 500;
+      font-size: 11px;
+      color: var(--ink-muted);
+    }
+
+    .relation-verb {
+      font-size: 11.5px;
+      font-weight: 650;
+      color: var(--wait-ink);
+    }
+
+    .task-card.is-closed .relation-verb {
+      color: var(--ink-muted);
+    }
+
+    .handle-id {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: var(--ink-muted);
+    }
+
+    .task-pills {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+
+    .wait-objective {
+      font-size: 14px;
+      font-weight: 650;
+      color: var(--ink-primary);
+      margin-bottom: 9px;
+      overflow-wrap: anywhere;
+    }
+
+    .field-kicker {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--ink-muted);
+      margin-right: 6px;
+    }
+
+    /* Report Box inside Task */
+    .report-box {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-md);
+      padding: 9px 11px;
+      margin-bottom: 9px;
+    }
+
+    .report-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px 10px;
+      flex-wrap: wrap;
+      margin-bottom: 5px;
+      font-size: 11.5px;
+      color: var(--ink-muted);
+    }
+
+    .report-header-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .report-msg {
+      margin: 0;
+      font-size: 13.5px;
+      color: var(--ink-primary);
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .history-bar {
+      margin-top: 7px;
+      padding-top: 6px;
+      border-top: 1px dashed var(--border-strong);
+    }
+
+    .history-toggle {
+      border: 0;
+      background: transparent;
+      padding: 2px 0;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--brand-ink);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .history-toggle:hover {
+      text-decoration: underline;
+    }
+
+    .history-list {
+      margin-top: 7px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .history-item {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-sm);
+      padding: 7px 9px;
+    }
+
+    .history-item.is-latest {
+      border-color: var(--border-strong);
+    }
+
+    /* Task Footer Details */
+    .task-details {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 5px;
+      font-size: 12.5px;
+      color: var(--ink-secondary);
+    }
+
+    .detail-row {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      flex-wrap: wrap;
+      min-width: 0;
+    }
+
+    .detail-label {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--ink-muted);
+      flex-shrink: 0;
+    }
+
+    .detail-val {
+      color: var(--ink-primary);
+      overflow-wrap: anywhere;
+    }
+
+    /* Copyable File Path Chip */
+    .copy-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      max-width: 100%;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-hairline);
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: var(--ink-primary);
+      cursor: pointer;
+      text-align: left;
+      transition: border-color 0.12s ease, background-color 0.12s ease;
+    }
+
+    .report-box .copy-chip {
+      background: var(--bg-surface);
+    }
+
+    .copy-chip:hover {
+      border-color: var(--border-strong);
+      background: var(--bg-inset);
+    }
+
+    .copy-path-text {
+      overflow-wrap: anywhere;
+    }
+
+    .copy-hint {
+      font-family: var(--font-sans);
+      font-size: 10.5px;
+      font-weight: 600;
+      color: var(--ink-muted);
+      flex-shrink: 0;
+    }
+
+    .copy-chip.copied {
+      border-color: var(--reply-border);
+      background: var(--reply-bg);
+    }
+
+    .copy-chip.copied .copy-hint {
+      color: var(--reply-ink);
+    }
+
+    /* Role Cards (Right Column) */
+    .role-card {
+      padding: 11px 13px;
+    }
+
+    .role-card.has-unknown {
+      border-color: var(--warn-border);
+    }
+
+    .role-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 6px;
+    }
+
+    .role-title-group {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .role-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--ink-primary);
+    }
+
+    .role-id-tag {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--ink-muted);
+    }
+
+    .harness-pill {
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 1px 7px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-inset);
+      border: 1px solid var(--border-strong);
+      color: var(--ink-primary);
+    }
+
+    .role-kv-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 5px 10px;
+      padding: 7px 9px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-hairline);
+      margin-bottom: 7px;
+      font-size: 12px;
+    }
+
+    .kv-cell {
+      min-width: 0;
+    }
+
+    .kv-label {
+      display: block;
+      font-size: 10.5px;
+      font-weight: 600;
+      color: var(--ink-muted);
+    }
+
+    .kv-value {
+      font-weight: 600;
+      color: var(--ink-primary);
+      overflow-wrap: anywhere;
+    }
+
+    .kv-value.mono {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+    }
+
+    .role-task-text {
+      margin: 0 0 7px;
+      font-size: 12.5px;
+      color: var(--ink-primary);
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .role-links {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+      margin-bottom: 6px;
+    }
+
+    .task-card.has-blocked {
+      border-color: var(--block-border);
+    }
+
+    .inline-link-btn {
+      border: 0;
+      background: transparent;
+      padding: 1px 4px;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--brand-ink);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .inline-link-btn:hover {
+      text-decoration: underline;
+    }
+
+    .inline-link-btn:focus-visible, .sources-toggle:focus-visible {
+      outline: 2px solid var(--brand-ink);
+      outline-offset: 1px;
+      border-radius: 3px;
+    }
+
+    .root-path-compact .copy-path-text {
+      display: inline-block;
+      max-width: 240px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      vertical-align: bottom;
+    }
+
+    .task-action-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 6px 10px;
+      flex-wrap: wrap;
+    }
+
+    .action-main {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      min-width: 0;
+      flex: 1 1 240px;
+    }
+
+    .next-auth-line {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ink-primary);
+      overflow-wrap: anywhere;
+    }
+
+    .meta-drawer {
+      margin-top: 8px;
+      padding: 7px 9px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-hairline);
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      font-size: 12px;
+    }
+
+    .role-card {
+      padding: 9px 12px;
+    }
+
+    .role-head {
+      margin-bottom: 4px;
+    }
+
+    .role-head-right {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+
+    .role-model-inline {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--ink-secondary);
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-hairline);
+      border-radius: 4px;
+      padding: 0 6px;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .role-task-text {
+      margin: 2px 0 0;
+      font-size: 12.5px;
+      line-height: 1.42;
+    }
+
+    /* Sources & Unified Note */
+    .sources-card {
+      padding: 9px 12px;
+      margin-top: 10px;
+    }
+
+    .sources-toggle {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .sources-meta {
+      font-size: 11.5px;
+      color: var(--ink-muted);
+      white-space: nowrap;
+    }
+
+    .source-list {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      margin-top: 8px;
+      padding-top: 7px;
+      border-top: 1px solid var(--border-hairline);
+    }
+
+    .source-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-size: 11.5px;
+      color: var(--ink-muted);
+    }
+
+    .global-note {
+      margin: 8px 2px 0;
+      font-size: 11.5px;
+      color: var(--ink-muted);
+      line-height: 1.45;
+    }
+
+    .empty-box {
+      padding: 18px 16px;
+      text-align: center;
+      color: var(--ink-muted);
+      font-size: 13px;
+    }
+
+    .icon-svg {
+      width: 13px;
+      height: 13px;
+      flex-shrink: 0;
+      vertical-align: -2px;
+    }
+
+    /* Responsive: Tablet & 390px Mobile */
+    @media (max-width: 1023px) {
+      .shell {
+        padding: 7px 10px 24px;
+      }
+
+      .topbar {
+        padding: 7px 10px;
+        margin-bottom: 7px;
+      }
+
+      .topbar-main {
+        gap: 8px;
+      }
+
+      .project-title {
+        font-size: 14.5px;
+      }
+
+      .topbar-meta {
+        margin-top: 5px;
+        padding-top: 5px;
+        gap: 4px 8px;
+        font-size: 11.5px;
+      }
+
+      .mobile-role-strip {
+        display: flex;
+        margin-bottom: 7px;
+      }
+
+      .role-jump {
+        padding: 3px 8px;
+        font-size: 11.5px;
+      }
+
+      .workspace-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      .section-head {
+        margin-bottom: 6px;
+      }
+
+      .stack {
+        gap: 8px;
+      }
+
+      .task-card {
+        padding: 9px 10px;
+      }
+
+      .task-top {
+        margin-bottom: 5px;
+        gap: 5px;
+      }
+
+      .wait-objective {
+        font-size: 13.5px;
+        margin-bottom: 6px;
+      }
+
+      .report-box {
+        padding: 7px 9px;
+        margin-bottom: 7px;
+      }
+
+      .report-msg {
+        font-size: 13px;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .product-name {
+        display: none;
+      }
+
+      .root-path-compact .copy-path-text {
+        max-width: 150px;
+      }
+
+      .role-model-inline {
+        max-width: 128px;
+      }
+
+      .role-kv-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell" id="app">
+    <header class="topbar" id="topbar"></header>
+    <div id="banners"></div>
+    <nav class="mobile-role-strip" id="mobile-roles" aria-label="Team roles shortcut"></nav>
+    <main class="workspace-grid" id="workspace"></main>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      var POLL_MS = 2000;
+      var FETCH_TIMEOUT_MS = 4500;
+
+      var I18N = {
+        zh: {
+          pageTitle: "SuperARIS · 协作进度",
+          boardName: "协作进度",
+          refresh: "刷新",
+          refreshing: "同步中…",
+          autoSyncNote: "每 2 秒自动同步",
+          generatedAt: "记录刷新",
+          receiverLabel: "收件器记录",
+          recRunning: "记录：运行",
+          recStopped: "记录：停止",
+          recStarting: "记录：启动中",
+          recDisabled: "记录：已停用",
+          recUnknown: "记录：未记录",
+          connLostTitle: "连接异常 · 当前保留上次已获取的项目记录（非实时同步）",
+          connInitFail: "暂无法读取 /api/board 项目记录接口",
+          retryNow: "立即重试",
+          warningsTitle: "记录读取提示",
+          tasksTitle: "协作等待与交付",
+          filterAll: "全部",
+          filterActive: "等待中",
+          filterAttention: "待关注",
+          closedDivider: "已结束等待（查看回执与原记录）",
+          noTasks: "当前项目暂无已登记的协作等待记录。",
+          noFilteredTasks: "该筛选条件下暂无记录。",
+          waitsOn: "等待",
+          fromWorker: "承接",
+          externalWorker: "外部任务 / MCP",
+          activeWait: "等待中",
+          closedWait: "等待已结束",
+          waitingFor: "等待",
+          latestReport: "最新报告",
+          noReports: "暂无已登记报告",
+          expandHistory: "展开全部 {count} 条报告",
+          collapseHistory: "收起历史报告（{count}）",
+          earlierPrefix: "早期：",
+          nextAuthorized: "下一授权动作",
+          taskRecord: "原任务记录",
+          deliverables: "交付物",
+          queryEntry: "查询指针",
+          receiptField: "回执记录",
+          reportFile: "报告文件",
+          fullPathLabel: "完整路径",
+          taskDetails: "记录详情",
+          hideDetails: "收起详情",
+          roleDetails: "详情",
+          hideRoleDetails: "收起",
+          expandPath: "展开",
+          collapsePath: "收起",
+          projectRootRel: "./（项目根目录）",
+          acceptanceConsult: "验收见原记录",
+          acceptanceNotEval: "未做科学验收",
+          acceptanceLabel: "验收说明",
+          deliveryLabel: "投递",
+          deliveryPendingUnknown: "投递待核实（只读）",
+          deliverySubmitted: "已投递",
+          deliveryNotice: "可见通知",
+          deliveryReceived: "已确认收到",
+          deliveryPrepared: "已准备",
+          deliveryAttempting: "记录投递中",
+          outcomeCompleted: "已报告完成 · 待核验",
+          outcomeBlocked: "受阻",
+          outcomeReply: "已回复澄清",
+          outcomeFailed: "报告失败",
+          rolesTitle: "团队概要",
+          noRoles: "暂无已绑定的团队角色记录。",
+          roleNames: {
+            main: "主会话",
+            engineer: "工程",
+            writer: "研究与写作",
+            figures: "图表"
+          },
+          requestedModel: "请求型号",
+          nativeModel: "沿用原生配置",
+          nativeShort: "原生默认",
+          recordedState: "启动保存值",
+          stateIdle: "idle",
+          stateDone: "done",
+          stateStarting: "starting",
+          stateBlocked: "blocked",
+          inputMode: "输入归属",
+          inputAuto: "自动化托管",
+          inputHuman: "人工掌控（通知）",
+          roleTask: "任务",
+          writeScope: "授权写域",
+          roleWaitingCount: "等待 {n}",
+          roleWorkingCount: "承接 {n}",
+          sourcesTitle: "记录数据源",
+          noSources: "未列出数据源文件",
+          modifiedAt: "更新于",
+          copyHint: "复制",
+          copiedHint: "已复制",
+          copyFailedHint: "复制失败",
+          copyFailedHelp: "请从详情中手动复制路径",
+          projectPath: "项目根",
+          summaryActive: "活跃 {n}",
+          summaryVerify: "待核验 {n}",
+          summaryBlocked: "受阻 {n}",
+          summaryUnknown: "投递待核实 {n}",
+          loading: "正在读取项目协作记录…",
+          footnote: "总说明：页面只读展示项目已保存记录，保存状态不代表进程此刻在线；“已报告完成·待核验”不等于通过验收，正式验收以原记录文件为准。"
+        },
+        en: {
+          pageTitle: "SuperARIS · Collaboration Board",
+          boardName: "Collaboration Board",
+          refresh: "Refresh",
+          refreshing: "Syncing…",
+          autoSyncNote: "Auto-sync 2s",
+          generatedAt: "Updated",
+          receiverLabel: "Receiver",
+          recRunning: "Recorded: running",
+          recStopped: "Recorded: stopped",
+          recStarting: "Recorded: starting",
+          recDisabled: "Recorded: disabled",
+          recUnknown: "Recorded: n/a",
+          connLostTitle: "Connection issue · Showing last fetched project records (not live)",
+          connInitFail: "Unable to reach /api/board right now",
+          retryNow: "Retry now",
+          warningsTitle: "Record read warnings",
+          tasksTitle: "Active Waits & Deliveries",
+          filterAll: "All",
+          filterActive: "Active",
+          filterAttention: "Needs attention",
+          closedDivider: "Closed waits (see receipt & original record)",
+          noTasks: "No registered collaboration waits in this project yet.",
+          noFilteredTasks: "No items match this filter.",
+          waitsOn: "waiting on",
+          fromWorker: "from",
+          externalWorker: "External / MCP",
+          activeWait: "Active wait",
+          closedWait: "Wait closed",
+          waitingFor: "Waiting",
+          latestReport: "Latest report",
+          noReports: "No reports recorded yet",
+          expandHistory: "Show all {count} reports",
+          collapseHistory: "Hide history ({count})",
+          earlierPrefix: "earlier: ",
+          nextAuthorized: "Next authorized",
+          taskRecord: "Task record",
+          deliverables: "Deliverables",
+          queryEntry: "Query pointer",
+          receiptField: "Receipt",
+          reportFile: "Report file",
+          fullPathLabel: "Full path",
+          taskDetails: "Details",
+          hideDetails: "Hide details",
+          roleDetails: "Details",
+          hideRoleDetails: "Hide",
+          expandPath: "Expand",
+          collapsePath: "Collapse",
+          projectRootRel: "./ (project root)",
+          acceptanceConsult: "Consult original record",
+          acceptanceNotEval: "Not evaluated",
+          acceptanceLabel: "Acceptance",
+          deliveryLabel: "Delivery",
+          deliveryPendingUnknown: "Delivery unverified (read-only)",
+          deliverySubmitted: "Submitted",
+          deliveryNotice: "Visible notice",
+          deliveryReceived: "Received",
+          deliveryPrepared: "Prepared",
+          deliveryAttempting: "Attempting (recorded)",
+          outcomeCompleted: "Reported completed · Needs check",
+          outcomeBlocked: "Blocked",
+          outcomeReply: "Clarification reply",
+          outcomeFailed: "Reported failed",
+          rolesTitle: "Team Summary",
+          noRoles: "No recorded team roles.",
+          roleNames: {
+            main: "Main",
+            engineer: "Engineer",
+            writer: "Research & Writing",
+            figures: "Figures"
+          },
+          requestedModel: "Requested model",
+          nativeModel: "Native CLI default",
+          nativeShort: "native",
+          recordedState: "Saved launch state",
+          stateIdle: "idle",
+          stateDone: "done",
+          stateStarting: "starting",
+          stateBlocked: "blocked",
+          inputMode: "Input mode",
+          inputAuto: "Automation-owned",
+          inputHuman: "Human-owned (notice)",
+          roleTask: "Task",
+          writeScope: "Write scope",
+          roleWaitingCount: "Waiting {n}",
+          roleWorkingCount: "Assigned {n}",
+          sourcesTitle: "Recorded Data Sources",
+          noSources: "No source files listed",
+          modifiedAt: "Modified",
+          copyHint: "Copy",
+          copiedHint: "Copied",
+          copyFailedHint: "Copy failed",
+          copyFailedHelp: "Copy the path manually from details",
+          projectPath: "Root",
+          summaryActive: "Active {n}",
+          summaryVerify: "Needs check {n}",
+          summaryBlocked: "Blocked {n}",
+          summaryUnknown: "Unverified delivery {n}",
+          loading: "Loading project collaboration records…",
+          footnote: "Note: Read-only view of saved project records; saved states do not imply live processes, and reported completions still require verification in the original record."
+        }
+      };
+
+      function initialLang() {
+        try {
+          var param = new URLSearchParams(window.location.search).get("lang");
+          if (param === "zh" || param === "en") {
+            return { lang: param, locked: true };
+          }
+        } catch (_) {}
+        return { lang: "zh", locked: false };
+      }
+
+      var init = initialLang();
+      var state = {
+        lang: init.lang,
+        langLocked: init.locked,
+        data: null,
+        lastPayloadKey: "",
+        inFlight: false,
+        manualSyncing: false,
+        connError: null,
+        lastOkAt: null,
+        filter: "all",
+        rootPathExpanded: false,
+        expandedTasks: new Set(),
+        expandedTaskMeta: new Set(),
+        expandedRoles: new Set(),
+        sourcesExpanded: false,
+        seenSignatures: null,
+        freshIds: new Set()
+      };
+
+      function t(key, vars) {
+        var dict = I18N[state.lang] || I18N.zh;
+        var raw = dict[key] !== undefined ? dict[key] : key;
+        if (!vars || typeof raw !== "string") return raw;
+        return raw.replace(/\{(\w+)\}/g, function (_, k) {
+          return vars[k] !== undefined ? String(vars[k]) : "";
+        });
+      }
+
+      /* Safe DOM builder: strictly textContent/createTextNode, never innerHTML with data */
+      function el(tag, attrs) {
+        var node = document.createElement(tag);
+        if (attrs) {
+          Object.keys(attrs).forEach(function (k) {
+            var v = attrs[k];
+            if (v === null || v === undefined || v === false) return;
+            if (k === "className") {
+              node.className = v;
+            } else if (k === "dataset") {
+              Object.keys(v).forEach(function (dk) { node.dataset[dk] = v[dk]; });
+            } else if (k.indexOf("on") === 0 && typeof v === "function") {
+              node.addEventListener(k.slice(2).toLowerCase(), v);
+            } else if (v === true) {
+              node.setAttribute(k, "");
+            } else {
+              node.setAttribute(k, String(v));
+            }
+          });
+        }
+        for (var i = 2; i < arguments.length; i++) {
+          appendChildSafe(node, arguments[i]);
+        }
+        return node;
+      }
+
+      function appendChildSafe(parent, child) {
+        if (child === null || child === undefined || child === false) return;
+        if (Array.isArray(child)) {
+          for (var j = 0; j < child.length; j++) appendChildSafe(parent, child[j]);
+        } else if (child && child.nodeType) {
+          parent.appendChild(child);
+        } else {
+          parent.appendChild(document.createTextNode(String(child)));
+        }
+      }
+
+      function svgRefresh() {
+        var ns = "http://www.w3.org/2000/svg";
+        var s = document.createElementNS(ns, "svg");
+        s.setAttribute("viewBox", "0 0 16 16");
+        s.setAttribute("fill", "none");
+        s.setAttribute("stroke", "currentColor");
+        s.setAttribute("stroke-width", "1.6");
+        s.setAttribute("stroke-linecap", "round");
+        s.setAttribute("stroke-linejoin", "round");
+        s.setAttribute("class", "icon-svg");
+        s.setAttribute("aria-hidden", "true");
+        var p1 = document.createElementNS(ns, "path");
+        p1.setAttribute("d", "M13.5 8a5.5 5.5 0 1 1-1.4-3.65L13.5 5.8");
+        var p2 = document.createElementNS(ns, "path");
+        p2.setAttribute("d", "M13.5 2.6v3.2h-3.2");
+        s.appendChild(p1);
+        s.appendChild(p2);
+        return s;
+      }
+
+      function harnessLabel(harness) {
+        if (!harness) return "—";
+        var map = { claude: "CC", codex: "Codex", agy: "AGY" };
+        var lower = String(harness).toLowerCase();
+        return map[lower] || String(harness);
+      }
+
+      function hostLabel(host) {
+        if (!host) return "";
+        var lower = String(host).toLowerCase();
+        if (lower === "herdr") return "Herdr";
+        if (lower === "orca") return "Orca";
+        return String(host);
+      }
+
+      function roleDisplayName(roleId) {
+        if (!roleId) return "—";
+        var names = (I18N[state.lang] || I18N.zh).roleNames;
+        return names[roleId] || String(roleId);
+      }
+
+      function formatTime(iso, refIso) {
+        if (!iso) return "—";
+        var d = new Date(iso);
+        if (isNaN(d.getTime())) return String(iso);
+        var pad = function (n) { return n < 10 ? "0" + n : String(n); };
+        var y = d.getFullYear();
+        var m = pad(d.getMonth() + 1);
+        var day = pad(d.getDate());
+        var hms = pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
+        if (refIso) {
+          var ref = new Date(refIso);
+          if (!isNaN(ref.getTime()) &&
+              ref.getFullYear() === y &&
+              ref.getMonth() === d.getMonth() &&
+              ref.getDate() === d.getDate()) {
+            return hms;
+          }
+        }
+        return y + "-" + m + "-" + day + " " + hms;
+      }
+
+      function outcomeInfo(outcome) {
+        var key = String(outcome || "").toLowerCase();
+        if (key === "completed") return { text: t("outcomeCompleted"), cls: "pill-check" };
+        if (key === "blocked") return { text: t("outcomeBlocked"), cls: "pill-block" };
+        if (key === "reply") return { text: t("outcomeReply"), cls: "pill-reply" };
+        if (key === "failed") return { text: t("outcomeFailed"), cls: "pill-block" };
+        return { text: outcome ? String(outcome) : "—", cls: "pill-neutral" };
+      }
+
+      function deliveryInfo(delivery, pendingUnknown) {
+        var raw = String(delivery || "").toLowerCase();
+        if (pendingUnknown || raw === "unknown") {
+          return { text: t("deliveryPendingUnknown"), cls: "pill-warn", unknown: true };
+        }
+        if (raw === "submitted") return { text: t("deliverySubmitted"), cls: "pill-neutral", unknown: false };
+        if (raw === "visible_notice") return { text: t("deliveryNotice"), cls: "pill-neutral", unknown: false };
+        if (raw === "received") return { text: t("deliveryReceived"), cls: "pill-reply", unknown: false };
+        if (raw === "prepared") return { text: t("deliveryPrepared"), cls: "pill-neutral", unknown: false };
+        if (raw === "attempting") return { text: t("deliveryAttempting"), cls: "pill-wait", unknown: false };
+        return { text: delivery ? String(delivery) : "—", cls: "pill-neutral", unknown: false };
+      }
+
+      function acceptanceText(value) {
+        if (!value) return "";
+        var raw = String(value).toLowerCase();
+        if (raw === "consult_original_record") return t("acceptanceConsult");
+        if (raw === "not_evaluated") return t("acceptanceNotEval");
+        return String(value);
+      }
+
+      function recordedStateText(value) {
+        if (!value) return "—";
+        var raw = String(value).toLowerCase();
+        if (raw === "idle") return t("stateIdle");
+        if (raw === "done") return t("stateDone");
+        if (raw === "starting") return t("stateStarting");
+        if (raw === "blocked") return t("stateBlocked");
+        return String(value);
+      }
+
+      function receiverSummary(rec) {
+        if (!rec || typeof rec !== "object") return { text: t("recUnknown"), cls: "pill-neutral", extra: "" };
+        if (rec.enabled === false) {
+          return { text: t("recDisabled"), cls: "pill-neutral", extra: rec.reason ? String(rec.reason) : "" };
+        }
+        var st = String(rec.recorded_status || "").toLowerCase();
+        var base = st === "running" ? t("recRunning")
+          : st === "stopped" ? t("recStopped")
+          : st === "starting" ? t("recStarting")
+          : rec.recorded_status ? String(rec.recorded_status) : t("recUnknown");
+        var cls = st === "stopped" && rec.reason && rec.reason !== "explicit_stop" ? "pill-warn" : "pill-neutral";
+        var parts = [];
+        if (rec.reason) parts.push(String(rec.reason));
+        if (rec.error) parts.push(String(rec.error));
+        return { text: base, cls: cls, extra: parts.join(" · ") };
+      }
+
+      function formatReceipt(receipt) {
+        if (receipt === null || receipt === undefined || receipt === "") return null;
+        if (typeof receipt === "string" || typeof receipt === "number" || typeof receipt === "boolean") {
+          return String(receipt);
+        }
+        if (typeof receipt === "object") {
+          var items = [];
+          Object.keys(receipt).forEach(function (k) {
+            var v = receipt[k];
+            if (v !== null && v !== undefined && v !== "") {
+              items.push(k + ": " + (typeof v === "object" ? JSON.stringify(v) : String(v)));
+            }
+          });
+          return items.length ? items.join(" · ") : null;
+        }
+        return String(receipt);
+      }
+
+      function copyTextToClipboard(text, buttonNode, hintNode) {
+        var done = function () {
+          buttonNode.classList.add("copied");
+          buttonNode.title = text;
+          hintNode.textContent = t("copiedHint");
+          setTimeout(function () {
+            if (buttonNode.isConnected) {
+              buttonNode.classList.remove("copied");
+              hintNode.textContent = t("copyHint");
+            }
+          }, 1300);
+        };
+        var failed = function () {
+          buttonNode.classList.remove("copied");
+          hintNode.textContent = t("copyFailedHint");
+          hintNode.setAttribute("role", "status");
+          buttonNode.title = t("copyFailedHelp") + "\n" + text;
+        };
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+          navigator.clipboard.writeText(text).then(done).catch(function () {
+            fallbackCopy(text, done, failed);
+          });
+        } else {
+          fallbackCopy(text, done, failed);
+        }
+      }
+
+      function fallbackCopy(text, onSuccess, onFailure) {
+        var area;
+        try {
+          area = document.createElement("textarea");
+          area.value = text;
+          area.setAttribute("readonly", "");
+          area.style.position = "fixed";
+          area.style.top = "-9999px";
+          document.body.appendChild(area);
+          area.select();
+          if (document.execCommand("copy")) onSuccess();
+          else onFailure();
+        } catch (_) {
+          onFailure();
+        } finally {
+          if (area && area.parentNode) area.parentNode.removeChild(area);
+        }
+      }
+
+      function normSlashes(p) {
+        var s = String(p || "").split("\\").join("/");
+        while (s.length > 1 && s.charAt(s.length - 1) === "/") {
+          s = s.slice(0, -1);
+        }
+        return s;
+      }
+
+      function relPathInfo(rawPath, projPath, opts) {
+        var full = String(rawPath || "");
+        if (!full) return { display: "—", rel: "", full: "", shortened: false };
+        var normFull = normSlashes(full);
+        var normProj = projPath ? normSlashes(projPath) : "";
+        var rel = normFull;
+        var shortened = false;
+        if (normProj) {
+          if (normFull === normProj) {
+            return {
+              display: opts && opts.isScope ? t("projectRootRel") : "./",
+              rel: "./",
+              full: full,
+              shortened: full !== "./"
+            };
+          }
+          if (normFull.indexOf(normProj + "/") === 0) {
+            rel = normFull.slice(normProj.length + 1);
+            shortened = true;
+          }
+        }
+        var display = rel;
+        if (opts && opts.compactReport && rel.indexOf(".aris/workbench/reports/") === 0) {
+          display = rel.slice(".aris/workbench/reports/".length);
+          shortened = true;
+        }
+        return { display: display, rel: rel, full: full, shortened: shortened || display !== full };
+      }
+
+      function shortRootTail(projPath) {
+        var norm = normSlashes(projPath);
+        var idx = norm.lastIndexOf("/");
+        if (idx > 0 && norm.length > 26) {
+          return "…/" + norm.slice(idx + 1);
+        }
+        return String(projPath || "");
+      }
+
+      function makeCopyChip(pathValue, displayOverride, extraClass) {
+        var fullStr = String(pathValue);
+        var shownStr = displayOverride !== undefined && displayOverride !== null ? String(displayOverride) : fullStr;
+        var hint = el("span", { className: "copy-hint" }, t("copyHint"));
+        var cls = "copy-chip" + (extraClass ? " " + extraClass : "");
+        var btn = el("button", {
+          type: "button",
+          className: cls,
+          title: fullStr,
+          onClick: function () { copyTextToClipboard(fullStr, btn, hint); }
+        },
+          el("span", { className: "copy-path-text" }, shownStr),
+          hint
+        );
+        return btn;
+      }
+
+      function canonicalMaterialJson(value, isRoot) {
+        if (value === null || value === undefined || typeof value !== "object") {
+          return JSON.stringify(value);
+        }
+        if (Array.isArray(value)) {
+          return "[" + value.map(function (item) {
+            return canonicalMaterialJson(item, false);
+          }).join(",") + "]";
+        }
+        var keys = Object.keys(value).sort();
+        var parts = [];
+        for (var i = 0; i < keys.length; i++) {
+          var k = keys[i];
+          if (isRoot && k === "generated_at") continue;
+          parts.push(JSON.stringify(k) + ":" + canonicalMaterialJson(value[k], false));
+        }
+        return "{" + parts.join(",") + "}";
+      }
+
+      function updateSyncTimeInPlace(isoValue) {
+        var timeNode = document.getElementById("sync-time-text");
+        if (timeNode && isoValue) {
+          timeNode.textContent = t("generatedAt") + ": " + formatTime(isoValue);
+          timeNode.setAttribute("title", String(isoValue));
+        }
+        var refreshBtn = document.getElementById("refresh-btn");
+        if (refreshBtn) {
+          refreshBtn.disabled = Boolean(state.manualSyncing);
+          var lbl = document.getElementById("refresh-btn-label");
+          if (lbl) lbl.textContent = state.manualSyncing ? t("refreshing") : t("refresh");
+        }
+      }
+
+      function computeSignatures(data) {
+        var map = {};
+        var tasks = Array.isArray(data && data.tasks) ? data.tasks : [];
+        tasks.forEach(function (tk, idx) {
+          var id = tk && tk.id ? String(tk.id) : "idx-" + idx;
+          var reps = Array.isArray(tk && tk.reports) ? tk.reports : [];
+          var last = reps.length ? reps[reps.length - 1] : null;
+          map["task:" + id] = [
+            Boolean(tk && tk.active),
+            Boolean(tk && tk.pending_unknown),
+            String((tk && tk.delivery) || ""),
+            reps.length,
+            last ? String(last.outcome || "") + "@" + String(last.time || "") + "@" + String(last.message || "") : ""
+          ].join("|");
+        });
+        return map;
+      }
+
+      function taskNeedsAttention(tk) {
+        if (!tk) return false;
+        if (tk.pending_unknown || String(tk.delivery || "").toLowerCase() === "unknown") return true;
+        var reps = Array.isArray(tk.reports) ? tk.reports : [];
+        if (!reps.length) return Boolean(tk.active);
+        var latest = String(reps[reps.length - 1].outcome || "").toLowerCase();
+        return Boolean(tk.active) && (latest === "completed" || latest === "blocked" || latest === "failed" || latest === "reply");
+      }
+
+      function setLanguage(nextLang) {
+        if (nextLang !== "zh" && nextLang !== "en") return;
+        state.lang = nextLang;
+        state.langLocked = true;
+        document.documentElement.lang = nextLang === "zh" ? "zh-CN" : "en";
+        document.title = t("pageTitle");
+        try {
+          var url = new URL(window.location.href);
+          url.searchParams.set("lang", nextLang);
+          window.history.replaceState(null, "", url.toString());
+        } catch (_) {}
+        renderAll(false);
+      }
+
+      /* Render Topbar */
+      function renderTopbar() {
+        var container = document.getElementById("topbar");
+        var data = state.data;
+        var proj = (data && data.project) || {};
+        var roles = Array.isArray(data && data.roles) ? data.roles : [];
+        var tasks = Array.isArray(data && data.tasks) ? data.tasks : [];
+
+        var activeCount = tasks.filter(function (x) { return x && x.active; }).length;
+        var verifyCount = tasks.filter(function (x) {
+          if (!x || !x.active || !Array.isArray(x.reports) || !x.reports.length) return false;
+          return String(x.reports[x.reports.length - 1].outcome || "").toLowerCase() === "completed";
+        }).length;
+        var blockedCount = tasks.filter(function (x) {
+          if (!x || !x.active || !Array.isArray(x.reports) || !x.reports.length) return false;
+          var o = String(x.reports[x.reports.length - 1].outcome || "").toLowerCase();
+          return o === "blocked" || o === "failed";
+        }).length;
+        var unknownCount = tasks.filter(function (x) {
+          return x && (x.pending_unknown || String(x.delivery || "").toLowerCase() === "unknown");
+        }).length + roles.filter(function (r) {
+          return r && (r.pending_unknown || String(r.delivery || "").toLowerCase() === "unknown");
+        }).length;
+
+        var rec = receiverSummary(data && data.receiver);
+
+        var mainRow = el("div", { className: "topbar-main" },
+          el("div", { className: "brand-cluster" },
+            el("span", { className: "sa-mark", "aria-hidden": "true" }, "SA"),
+            el("span", { className: "product-name" }, "SuperARIS"),
+            el("span", { className: "board-badge" }, t("boardName")),
+            proj.name ? el("span", { className: "divider-dot" }, "·") : null,
+            proj.name ? el("h1", { className: "project-title" }, proj.name) : null,
+            proj.host ? el("span", { className: "host-tag" }, hostLabel(proj.host)) : null
+          ),
+          el("div", { className: "controls-cluster" },
+            el("button", {
+              type: "button",
+              id: "refresh-btn",
+              className: "btn",
+              disabled: state.manualSyncing,
+              onClick: function () { fetchBoard(true); }
+            }, svgRefresh(), el("span", { id: "refresh-btn-label" }, state.manualSyncing ? t("refreshing") : t("refresh"))),
+            el("div", { className: "lang-switch", role: "group", "aria-label": "Language" },
+              el("button", {
+                type: "button",
+                className: "lang-btn" + (state.lang === "zh" ? " active" : ""),
+                "aria-pressed": state.lang === "zh" ? "true" : "false",
+                onClick: function () { setLanguage("zh"); }
+              }, "中文"),
+              el("button", {
+                type: "button",
+                className: "lang-btn" + (state.lang === "en" ? " active" : ""),
+                "aria-pressed": state.lang === "en" ? "true" : "false",
+                onClick: function () { setLanguage("en"); }
+              }, "EN")
+            )
+          )
+        );
+
+        var metaLeft = el("div", { className: "meta-left" });
+        if (proj.path) {
+          var rawRoot = String(proj.path);
+          var shortRoot = shortRootTail(rawRoot);
+          var canToggleRoot = shortRoot !== rawRoot || rawRoot.length > 28;
+          metaLeft.appendChild(el("span", null, t("projectPath") + ":"));
+          metaLeft.appendChild(makeCopyChip(
+            rawRoot,
+            state.rootPathExpanded ? rawRoot : shortRoot,
+            state.rootPathExpanded ? "" : "root-path-compact"
+          ));
+          if (canToggleRoot) {
+            metaLeft.appendChild(el("button", {
+              type: "button",
+              className: "inline-link-btn",
+              "aria-expanded": state.rootPathExpanded ? "true" : "false",
+              onClick: function () {
+                state.rootPathExpanded = !state.rootPathExpanded;
+                renderTopbar();
+              }
+            }, state.rootPathExpanded ? t("collapsePath") : t("expandPath")));
+          }
+        }
+        if (data) {
+          metaLeft.appendChild(el("span", {
+            className: "pill " + rec.cls,
+            title: rec.extra || ""
+          }, rec.text + (rec.extra ? " (" + rec.extra + ")" : "")));
+          metaLeft.appendChild(el("span", { className: "pill pill-wait tabular" }, t("summaryActive", { n: activeCount })));
+          if (verifyCount > 0) {
+            metaLeft.appendChild(el("span", { className: "pill pill-check tabular" }, t("summaryVerify", { n: verifyCount })));
+          }
+          if (blockedCount > 0) {
+            metaLeft.appendChild(el("span", { className: "pill pill-block tabular" }, t("summaryBlocked", { n: blockedCount })));
+          }
+          if (unknownCount > 0) {
+            metaLeft.appendChild(el("span", { className: "pill pill-warn tabular" }, t("summaryUnknown", { n: unknownCount })));
+          }
+        }
+
+        var metaRight = el("div", { className: "meta-right tabular" },
+          el("span", null, t("autoSyncNote")),
+          data && data.generated_at ? el("span", {
+            id: "sync-time-text",
+            title: String(data.generated_at)
+          }, t("generatedAt") + ": " + formatTime(data.generated_at)) : null
+        );
+
+        container.replaceChildren(mainRow, el("div", { className: "topbar-meta" }, metaLeft, metaRight));
+      }
+
+      /* Render Conditional Connection & Warning Banners */
+      function renderBanners() {
+        var box = document.getElementById("banners");
+        var nodes = [];
+
+        if (state.connError && state.data) {
+          nodes.push(el("div", { className: "banner banner-conn", role: "status" },
+            el("div", null,
+              el("strong", null, t("connLostTitle")),
+              el("div", null, String(state.connError))
+            ),
+            el("button", {
+              type: "button",
+              className: "btn",
+              onClick: function () { fetchBoard(true); }
+            }, t("retryNow"))
+          ));
+        }
+
+        var warnings = state.data && Array.isArray(state.data.warnings) ? state.data.warnings : [];
+        if (warnings.length > 0) {
+          nodes.push(el("div", { className: "banner banner-warn", role: "region", "aria-label": t("warningsTitle") },
+            el("div", null,
+              el("strong", null, t("warningsTitle") + " (" + warnings.length + ")"),
+              el("ul", { className: "banner-list" },
+                warnings.map(function (w) {
+                  var text = typeof w === "object" && w !== null ? JSON.stringify(w) : String(w);
+                  return el("li", null, text);
+                })
+              )
+            )
+          ));
+        }
+
+        box.replaceChildren.apply(box, nodes);
+      }
+
+      /* Render Mobile Quick-Jump Role Bar */
+      function renderMobileRoleStrip() {
+        var nav = document.getElementById("mobile-roles");
+        var roles = state.data && Array.isArray(state.data.roles) ? state.data.roles : [];
+        var tasks = state.data && Array.isArray(state.data.tasks) ? state.data.tasks : [];
+        if (!roles.length) {
+          nav.replaceChildren();
+          return;
+        }
+        var chips = roles.map(function (r, idx) {
+          var id = r && r.id ? String(r.id) : "role-" + idx;
+          var hasUnknown = r && (r.pending_unknown || String(r.delivery || "").toLowerCase() === "unknown");
+          var activeLinks = tasks.filter(function (tk) {
+            return tk && tk.active && (tk.owner_role === id || tk.worker_role === id);
+          }).length;
+          return el("button", {
+            type: "button",
+            className: "role-jump",
+            onClick: function () {
+              var target = document.getElementById("role-card-" + id);
+              if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+          },
+            el("strong", null, roleDisplayName(id)),
+            el("span", { className: "actor-harness" }, harnessLabel(r && r.harness)),
+            activeLinks > 0 ? el("span", { className: "count-pill" }, String(activeLinks)) : null,
+            hasUnknown ? el("span", { className: "pill pill-warn" }, "!") : null
+          );
+        });
+        nav.replaceChildren.apply(nav, chips);
+      }
+
+      /* Render Single Report Item */
+      function renderReportEntry(rep, idx, total, refIso, projPath, isHistoryItem) {
+        var out = outcomeInfo(rep && rep.outcome);
+        var rawAcc = rep && rep.acceptance ? String(rep.acceptance).toLowerCase() : "";
+        var extraAcc = rawAcc && rawAcc !== "not_evaluated" ? acceptanceText(rep.acceptance) : "";
+        var headerLeft = el("div", { className: "report-header-left" },
+          isHistoryItem ? el("span", { className: "handle-id tabular" }, "#" + (idx + 1)) : null,
+          el("span", { className: "pill " + out.cls }, out.text),
+          rep && rep.time ? el("span", { className: "tabular", title: String(rep.time) }, formatTime(rep.time, refIso)) : null,
+          extraAcc ? el("span", null, "· " + extraAcc) : null
+        );
+        var headerRight = null;
+        if (rep && rep.path) {
+          var repPath = relPathInfo(rep.path, projPath, { compactReport: true });
+          headerRight = makeCopyChip(rep.path, repPath.display);
+        }
+        return el("div", { className: isHistoryItem ? "history-item" + (idx === total - 1 ? " is-latest" : "") : "" },
+          el("div", { className: "report-header" }, headerLeft, headerRight),
+          el("p", { className: "report-msg" }, rep && rep.message !== undefined && rep.message !== null ? String(rep.message) : "")
+        );
+      }
+
+      /* Render Single Task Card */
+      function renderTaskCard(tk, roleMap, refIso, projPath) {
+        var id = tk && tk.id ? String(tk.id) : "";
+        var active = Boolean(tk && tk.active);
+        var deliv = deliveryInfo(tk && tk.delivery, Boolean(tk && tk.pending_unknown));
+        var ownerId = tk && tk.owner_role ? String(tk.owner_role) : "main";
+        var workerId = tk && tk.worker_role ? String(tk.worker_role) : "";
+        var ownerRec = roleMap[ownerId];
+        var workerRec = workerId ? roleMap[workerId] : null;
+
+        var reports = Array.isArray(tk && tk.reports) ? tk.reports : [];
+        var latest = reports.length ? reports[reports.length - 1] : null;
+        var latestOutcomeKey = latest && latest.outcome ? String(latest.outcome).toLowerCase() : "";
+        var isBlocked = active && (latestOutcomeKey === "blocked" || latestOutcomeKey === "failed");
+
+        var classes = ["card", "task-card"];
+        if (!active) classes.push("is-closed");
+        if (deliv.unknown) classes.push("has-unknown");
+        else if (isBlocked) classes.push("has-blocked");
+        if (state.freshIds.has("task:" + id)) classes.push("just-updated");
+
+        var ownerChip = el("span", { className: "actor-chip" },
+          roleDisplayName(ownerId),
+          ownerRec && ownerRec.harness ? el("span", { className: "actor-harness" }, harnessLabel(ownerRec.harness)) : null
+        );
+        var workerChip = el("span", { className: "actor-chip" },
+          workerId ? roleDisplayName(workerId) : t("externalWorker"),
+          workerRec && workerRec.harness ? el("span", { className: "actor-harness" }, harnessLabel(workerRec.harness)) : null
+        );
+
+        var relation = el("div", { className: "relation-flow" },
+          ownerChip,
+          el("span", { className: "relation-verb" }, active ? ("← " + t("waitsOn") + " ←") : ("← " + t("fromWorker") + " ←")),
+          workerChip,
+          id ? el("span", { className: "handle-id" }, "#" + id) : null
+        );
+
+        var pills = el("div", { className: "task-pills" },
+          el("span", { className: "pill " + (active ? "pill-wait" : "pill-neutral") }, active ? t("activeWait") : t("closedWait")),
+          deliv.unknown ? el("span", { className: "pill pill-warn" }, deliv.text) : null
+        );
+
+        var waitLine = tk && tk.wait_for ? el("div", { className: "wait-objective" },
+          el("span", { className: "field-kicker" }, t("waitingFor") + ":"),
+          String(tk.wait_for)
+        ) : null;
+
+        /* Reports box: latest first-class, full chronological history expandable */
+        var reportSection;
+        if (!reports.length) {
+          reportSection = el("div", { className: "report-box" },
+            el("span", { className: "detail-label" }, t("noReports"))
+          );
+        } else {
+          var isExpanded = state.expandedTasks.has(id);
+          var earlierSummary = "";
+          if (reports.length > 1) {
+            var seenOutcomes = [];
+            for (var rIdx = 0; rIdx < reports.length - 1; rIdx++) {
+              var lbl = outcomeInfo(reports[rIdx] && reports[rIdx].outcome).text;
+              if (seenOutcomes.indexOf(lbl) === -1) seenOutcomes.push(lbl);
+            }
+            if (seenOutcomes.length) {
+              earlierSummary = " · " + t("earlierPrefix") + seenOutcomes.join(" → ");
+            }
+          }
+
+          var historyContainer = null;
+          if (reports.length > 1) {
+            var toggleLabel = isExpanded
+              ? t("collapseHistory", { count: reports.length })
+              : (t("expandHistory", { count: reports.length }) + earlierSummary);
+            historyContainer = el("div", { className: "history-bar" },
+              el("button", {
+                type: "button",
+                className: "history-toggle",
+                "aria-expanded": isExpanded ? "true" : "false",
+                onClick: function () {
+                  if (state.expandedTasks.has(id)) {
+                    state.expandedTasks.delete(id);
+                  } else {
+                    state.expandedTasks.add(id);
+                  }
+                  renderWorkspace();
+                }
+              }, (isExpanded ? "▾ " : "▸ ") + toggleLabel),
+              isExpanded ? el("div", { className: "history-list" },
+                reports.map(function (item, index) {
+                  return renderReportEntry(item, index, reports.length, refIso, projPath, true);
+                })
+              ) : null
+            );
+          }
+
+          reportSection = el("div", { className: "report-box" },
+            renderReportEntry(latest, reports.length - 1, reports.length, refIso, projPath, false),
+            historyContainer
+          );
+        }
+
+        /* Primary Action + Deliverables + Collapsible Metadata */
+        var actionItems = [];
+        if (tk && tk.next_authorized) {
+          actionItems.push(el("div", { className: "next-auth-line" },
+            el("span", { className: "field-kicker" }, t("nextAuthorized") + ":"),
+            String(tk.next_authorized)
+          ));
+        }
+
+        var deliverables = Array.isArray(tk && tk.deliverables) ? tk.deliverables.filter(Boolean) : [];
+        if (deliverables.length) {
+          actionItems.push(el("div", { className: "detail-row" },
+            el("span", { className: "detail-label" }, t("deliverables") + ":"),
+            deliverables.map(function (p) {
+              var info = relPathInfo(p, projPath);
+              return makeCopyChip(p, info.display);
+            })
+          ));
+        }
+
+        var receiptText = formatReceipt(tk && tk.receipt);
+        if (!active && receiptText) {
+          actionItems.push(el("div", { className: "detail-row" },
+            el("span", { className: "detail-label" }, t("receiptField") + ":"),
+            el("span", { className: "detail-val" }, receiptText)
+          ));
+        }
+
+        var metaOpen = state.expandedTaskMeta.has(id);
+        var metaRows = [];
+        var accStr = acceptanceText(tk && tk.acceptance);
+        if (accStr) {
+          metaRows.push(el("div", { className: "detail-row" },
+            el("span", { className: "detail-label" }, t("acceptanceLabel") + ":"),
+            el("span", { className: "detail-val" }, accStr)
+          ));
+        }
+        metaRows.push(el("div", { className: "detail-row" },
+          el("span", { className: "detail-label" }, t("deliveryLabel") + ":"),
+          el("span", { className: "detail-val" }, deliv.text)
+        ));
+        if (tk && tk.record) {
+          var recInfo = relPathInfo(tk.record, projPath);
+          metaRows.push(el("div", { className: "detail-row" },
+            el("span", { className: "detail-label" }, t("taskRecord") + ":"),
+            makeCopyChip(tk.record, recInfo.display),
+            recInfo.shortened && recInfo.display !== tk.record ? makeCopyChip(tk.record, tk.record) : null
+          ));
+        }
+        if (latest && latest.path) {
+          var fullRepRel = relPathInfo(latest.path, projPath);
+          metaRows.push(el("div", { className: "detail-row" },
+            el("span", { className: "detail-label" }, t("reportFile") + ":"),
+            makeCopyChip(latest.path, fullRepRel.rel || latest.path)
+          ));
+        }
+        if (active && receiptText) {
+          metaRows.push(el("div", { className: "detail-row" },
+            el("span", { className: "detail-label" }, t("receiptField") + ":"),
+            el("span", { className: "detail-val" }, receiptText)
+          ));
+        }
+        if (tk && tk.query) {
+          metaRows.push(el("div", { className: "detail-row" },
+            el("span", { className: "detail-label" }, t("queryEntry") + ":"),
+            el("span", { className: "detail-val" }, String(tk.query))
+          ));
+        }
+
+        var detailsBtn = metaRows.length ? el("button", {
+          type: "button",
+          className: "inline-link-btn",
+          "aria-expanded": metaOpen ? "true" : "false",
+          onClick: function () {
+            if (state.expandedTaskMeta.has(id)) {
+              state.expandedTaskMeta.delete(id);
+            } else {
+              state.expandedTaskMeta.add(id);
+            }
+            renderWorkspace();
+          }
+        }, (metaOpen ? "▾ " : "▸ ") + (metaOpen ? t("hideDetails") : t("taskDetails"))) : null;
+
+        return el("article", { className: classes.join(" ") },
+          el("div", { className: "task-top" }, relation, pills),
+          waitLine,
+          reportSection,
+          el("div", { className: "task-action-row" },
+            el("div", { className: "action-main" }, actionItems),
+            detailsBtn
+          ),
+          metaOpen && metaRows.length ? el("div", { className: "meta-drawer" }, metaRows) : null
+        );
+      }
+
+      /* Render Compact Role Card */
+      function renderRoleCard(role, idx, tasks, projPath) {
+        var id = role && role.id ? String(role.id) : "role-" + idx;
+        var deliv = deliveryInfo(role && role.delivery, Boolean(role && role.pending_unknown));
+        var waitingTasks = tasks.filter(function (tk) { return tk && tk.active && tk.owner_role === id; });
+        var workingTasks = tasks.filter(function (tk) { return tk && tk.active && tk.worker_role === id; });
+        var roleOpen = state.expandedRoles.has(id);
+
+        var shortModelText = role && role.requested_model ? String(role.requested_model) : t("nativeShort");
+        var headRight = [];
+        if (waitingTasks.length > 0) {
+          headRight.push(el("span", { className: "pill pill-wait tabular" }, t("roleWaitingCount", { n: waitingTasks.length })));
+        }
+        if (workingTasks.length > 0) {
+          headRight.push(el("span", { className: "pill pill-check tabular" }, t("roleWorkingCount", { n: workingTasks.length })));
+        }
+        if (deliv.unknown) {
+          headRight.push(el("span", { className: "pill pill-warn" }, deliv.text));
+        }
+        headRight.push(el("span", { className: "harness-pill" }, harnessLabel(role && role.harness)));
+        headRight.push(el("button", {
+          type: "button",
+          className: "inline-link-btn",
+          "aria-expanded": roleOpen ? "true" : "false",
+          onClick: function () {
+            if (state.expandedRoles.has(id)) {
+              state.expandedRoles.delete(id);
+            } else {
+              state.expandedRoles.add(id);
+            }
+            renderWorkspace();
+          }
+        }, (roleOpen ? "▾ " : "▸ ") + (roleOpen ? t("hideRoleDetails") : t("roleDetails"))));
+
+        var scopeInfo = role && role.write_scope ? relPathInfo(role.write_scope, projPath, { isScope: true }) : null;
+        var drawer = roleOpen ? el("div", { className: "meta-drawer" },
+          el("div", { className: "role-kv-grid", style: "margin-bottom: 0; background: var(--bg-surface);" },
+            el("div", { className: "kv-cell" },
+              el("span", { className: "kv-label" }, t("requestedModel")),
+              role && role.requested_model
+                ? el("span", { className: "kv-value mono" }, String(role.requested_model))
+                : el("span", { className: "kv-value" }, t("nativeModel"))
+            ),
+            el("div", { className: "kv-cell" },
+              el("span", { className: "kv-label" }, t("recordedState")),
+              el("span", { className: "kv-value" }, recordedStateText(role && role.recorded_status))
+            ),
+            el("div", { className: "kv-cell" },
+              el("span", { className: "kv-label" }, t("inputMode")),
+              el("span", { className: "kv-value" }, role && role.automation_owned ? t("inputAuto") : t("inputHuman"))
+            ),
+            el("div", { className: "kv-cell" },
+              el("span", { className: "kv-label" }, t("deliveryLabel")),
+              el("span", { className: "kv-value" }, deliv.text)
+            )
+          ),
+          scopeInfo ? el("div", { className: "detail-row" },
+            el("span", { className: "detail-label" }, t("writeScope") + ":"),
+            makeCopyChip(role.write_scope, scopeInfo.display),
+            scopeInfo.shortened && scopeInfo.display !== role.write_scope ? makeCopyChip(role.write_scope, role.write_scope) : null
+          ) : null
+        ) : null;
+
+        return el("article", {
+          id: "role-card-" + id,
+          className: "card role-card" + (deliv.unknown ? " has-unknown" : "")
+        },
+          el("div", { className: "role-head" },
+            el("div", { className: "role-title-group" },
+              el("span", { className: "role-name" }, roleDisplayName(id)),
+              el("span", {
+                className: "role-model-inline",
+                title: t("requestedModel") + ": " + (role && role.requested_model ? String(role.requested_model) : t("nativeModel"))
+              }, shortModelText)
+            ),
+            el("div", { className: "role-head-right" }, headRight)
+          ),
+          role && role.task ? el("p", { className: "role-task-text" },
+            el("span", { className: "field-kicker" }, t("roleTask") + ":"),
+            String(role.task)
+          ) : null,
+          drawer
+        );
+      }
+
+      /* Render Main Two-Column Workspace */
+      function renderWorkspace() {
+        var main = document.getElementById("workspace");
+
+        if (!state.data) {
+          if (state.connError) {
+            main.replaceChildren(el("div", { className: "card empty-box", style: "grid-column: 1 / -1;" },
+              el("p", { style: "margin: 0 0 8px; font-weight: 650; color: var(--warn-ink);" }, t("connInitFail")),
+              el("p", { style: "margin: 0 0 12px; font-size: 12.5px;" }, String(state.connError)),
+              el("button", {
+                type: "button",
+                className: "btn",
+                onClick: function () { fetchBoard(true); }
+              }, t("retryNow"))
+            ));
+          } else {
+            main.replaceChildren(el("div", { className: "card empty-box", style: "grid-column: 1 / -1;" }, t("loading")));
+          }
+          return;
+        }
+
+        var data = state.data;
+        var projPath = (data.project && data.project.path) ? String(data.project.path) : "";
+        var roles = Array.isArray(data.roles) ? data.roles : [];
+        var tasks = Array.isArray(data.tasks) ? data.tasks : [];
+        var sources = Array.isArray(data.sources) ? data.sources : [];
+        var refIso = data.generated_at || null;
+
+        var roleMap = {};
+        roles.forEach(function (r) {
+          if (r && r.id) roleMap[String(r.id)] = r;
+        });
+
+        /* Left Column: Tasks */
+        var filtered = tasks.filter(function (tk) {
+          if (state.filter === "active") return Boolean(tk && tk.active);
+          if (state.filter === "attention") return taskNeedsAttention(tk);
+          return true;
+        });
+
+        var activeTasks = filtered.filter(function (tk) { return Boolean(tk && tk.active); });
+        var closedTasks = filtered.filter(function (tk) { return !tk || !tk.active; });
+
+        var filterControls = tasks.length > 1 ? el("div", { className: "filter-bar", role: "group" },
+          [
+            { id: "all", label: t("filterAll") + " (" + tasks.length + ")" },
+            { id: "active", label: t("filterActive") + " (" + tasks.filter(function (x) { return x && x.active; }).length + ")" },
+            { id: "attention", label: t("filterAttention") + " (" + tasks.filter(taskNeedsAttention).length + ")" }
+          ].map(function (f) {
+            return el("button", {
+              type: "button",
+              className: "filter-btn" + (state.filter === f.id ? " active" : ""),
+              onClick: function () {
+                state.filter = f.id;
+                renderWorkspace();
+              }
+            }, f.label);
+          })
+        ) : null;
+
+        var taskNodes = [];
+        if (!tasks.length) {
+          taskNodes.push(el("div", { className: "card empty-box" }, t("noTasks")));
+        } else if (!filtered.length) {
+          taskNodes.push(el("div", { className: "card empty-box" }, t("noFilteredTasks")));
+        } else {
+          activeTasks.forEach(function (tk) {
+            taskNodes.push(renderTaskCard(tk, roleMap, refIso, projPath));
+          });
+          if (closedTasks.length) {
+            if (activeTasks.length) {
+              taskNodes.push(el("div", { className: "sub-divider" }, t("closedDivider")));
+            }
+            closedTasks.forEach(function (tk) {
+              taskNodes.push(renderTaskCard(tk, roleMap, refIso, projPath));
+            });
+          }
+        }
+
+        var leftCol = el("section", { "aria-labelledby": "tasks-heading" },
+          el("div", { className: "section-head" },
+            el("h2", { className: "section-title", id: "tasks-heading" },
+              t("tasksTitle"),
+              el("span", { className: "count-pill" }, tasks.length)
+            ),
+            filterControls
+          ),
+          el("div", { className: "stack" }, taskNodes)
+        );
+
+        /* Right Column: Compact Roles + Collapsed Sources + Single Global Note */
+        var roleNodes = roles.length
+          ? roles.map(function (r, i) { return renderRoleCard(r, i, tasks, projPath); })
+          : [el("div", { className: "card empty-box" }, t("noRoles"))];
+
+        var latestSourceMtime = "";
+        sources.forEach(function (s) {
+          if (s && s.modified_at && String(s.modified_at) > latestSourceMtime) {
+            latestSourceMtime = String(s.modified_at);
+          }
+        });
+
+        var sourcesCard = el("div", { className: "card sources-card" },
+          el("button", {
+            type: "button",
+            className: "sources-toggle",
+            "aria-expanded": state.sourcesExpanded ? "true" : "false",
+            onClick: function () {
+              state.sourcesExpanded = !state.sourcesExpanded;
+              renderWorkspace();
+            }
+          },
+            el("span", { className: "section-title", style: "font-size: 12.5px;" },
+              (state.sourcesExpanded ? "▾ " : "▸ ") + t("sourcesTitle"),
+              el("span", { className: "count-pill" }, sources.length)
+            ),
+            latestSourceMtime ? el("span", { className: "sources-meta tabular", title: latestSourceMtime },
+              t("modifiedAt") + " " + formatTime(latestSourceMtime, refIso)
+            ) : null
+          ),
+          state.sourcesExpanded ? (
+            sources.length ? el("div", { className: "source-list" },
+              sources.map(function (src) {
+                var sInfo = src && src.path ? relPathInfo(src.path, projPath) : null;
+                return el("div", { className: "source-row" },
+                  sInfo ? makeCopyChip(src.path, sInfo.display) : el("span", null, "—"),
+                  src && src.modified_at ? el("span", { className: "tabular", title: String(src.modified_at) },
+                    t("modifiedAt") + " " + formatTime(src.modified_at, refIso)
+                  ) : null
+                );
+              })
+            ) : el("div", { style: "font-size: 12px; color: var(--ink-muted); margin-top: 6px;" }, t("noSources"))
+          ) : null
+        );
+
+        var rightCol = el("section", { id: "roles-section", "aria-labelledby": "roles-heading" },
+          el("div", { className: "section-head" },
+            el("h2", { className: "section-title", id: "roles-heading" },
+              t("rolesTitle"),
+              el("span", { className: "count-pill" }, roles.length)
+            )
+          ),
+          el("div", { className: "stack" }, roleNodes),
+          sourcesCard,
+          el("p", { className: "global-note" }, t("footnote"))
+        );
+
+        main.replaceChildren(leftCol, rightCol);
+      }
+
+      function renderAll(clearFreshAfter) {
+        document.documentElement.lang = state.lang === "zh" ? "zh-CN" : "en";
+        document.title = t("pageTitle");
+        renderTopbar();
+        renderBanners();
+        renderMobileRoleStrip();
+        renderWorkspace();
+        if (clearFreshAfter && state.freshIds.size > 0) {
+          setTimeout(function () { state.freshIds.clear(); }, 1200);
+        }
+      }
+
+      function fetchBoard(isManual) {
+        if (state.inFlight) return;
+        state.inFlight = true;
+        if (isManual) {
+          state.manualSyncing = true;
+          updateSyncTimeInPlace(state.data && state.data.generated_at);
+        }
+
+        var controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+        var timer = controller ? setTimeout(function () { controller.abort(); }, FETCH_TIMEOUT_MS) : null;
+
+        fetch("/api/board", {
+          method: "GET",
+          cache: "no-store",
+          headers: { "Accept": "application/json" },
+          signal: controller ? controller.signal : undefined
+        })
+          .then(function (resp) {
+            if (!resp.ok) {
+              throw new Error("HTTP " + resp.status + (resp.statusText ? " " + resp.statusText : ""));
+            }
+            return resp.text();
+          })
+          .then(function (rawText) {
+            var parsed = JSON.parse(rawText);
+            if (!parsed || typeof parsed !== "object") {
+              throw new Error("Invalid JSON payload");
+            }
+
+            if (!state.langLocked) {
+              var apiLang = parsed.project && parsed.project.ui_language;
+              if (apiLang === "zh" || apiLang === "en") {
+                state.lang = apiLang;
+              }
+              state.langLocked = true;
+            }
+
+            var hadConnError = state.connError !== null;
+            state.connError = null;
+            state.lastOkAt = Date.now();
+
+            var nextSigs = computeSignatures(parsed);
+            var nextMaterialKey = canonicalMaterialJson(parsed, true);
+            var changed = nextMaterialKey !== state.lastPayloadKey;
+
+            if (changed) {
+              state.freshIds.clear();
+              if (state.seenSignatures !== null) {
+                Object.keys(nextSigs).forEach(function (k) {
+                  if (state.seenSignatures[k] !== nextSigs[k]) {
+                    state.freshIds.add(k);
+                  }
+                });
+              }
+              state.seenSignatures = nextSigs;
+              state.lastPayloadKey = nextMaterialKey;
+              state.data = parsed;
+              state.manualSyncing = false;
+              renderAll(true);
+            } else {
+              if (state.data) {
+                state.data.generated_at = parsed.generated_at;
+              }
+              state.manualSyncing = false;
+              if (hadConnError) {
+                renderTopbar();
+                renderBanners();
+              } else {
+                updateSyncTimeInPlace(parsed.generated_at);
+              }
+            }
+          })
+          .catch(function (err) {
+            var msg = err && err.name === "AbortError" ? "Request timed out" : (err && err.message ? err.message : String(err));
+            var prevErr = state.connError;
+            state.connError = msg;
+            state.manualSyncing = false;
+            if (!state.data || prevErr !== msg || isManual) {
+              renderTopbar();
+              renderBanners();
+              if (!state.data) renderWorkspace();
+            } else {
+              updateSyncTimeInPlace(state.data && state.data.generated_at);
+            }
+          })
+          .finally(function () {
+            if (timer) clearTimeout(timer);
+            state.inFlight = false;
+          });
+      }
+
+      renderAll(false);
+      fetchBoard(false);
+      setInterval(function () {
+        fetchBoard(false);
+      }, POLL_MS);
+    })();
+  </script>
+</body>
+</html>

@@ -3,6 +3,8 @@
 language = "zh"
 
 _EN = {
+    "手动输入模型 ID 或原生名称": "Enter a model ID or native display name",
+    "Orchestrator 在同一会话内协调规划与执行，不增加团队角色。": "Orchestrator coordinates planning and execution within one session; it adds no team role.",
     '未知': 'unknown',
     '本地用量 / Usage': 'Local usage',
     '范围内本地观测；缺失字段为未知。': 'Local observations in range; missing fields are unknown.',
