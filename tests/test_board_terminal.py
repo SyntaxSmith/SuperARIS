@@ -1,5 +1,6 @@
 """Foreground terminal view and explicitly anchored Herdr tab; no models."""
 import json
+from pathlib import Path
 import sys
 
 import pytest
@@ -38,7 +39,7 @@ def test_watch_refreshes_changed_records_without_generated_at_churn(project, mon
     assert 'Next:' in output and 'original acceptance' in output
     # Only the test's explicit report edit changed any project bytes.
     after = snapshot(project)
-    assert [p for p in before if before[p] != after[p]] == ['.aris/workbench/reports/experiment/0001.json']
+    assert [Path(p).as_posix() for p in before if before[p] != after[p]] == ['.aris/workbench/reports/experiment/0001.json']
 
 
 @pytest.fixture
