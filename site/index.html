@@ -1612,6 +1612,7 @@
     button:focus-visible,a:focus-visible,select:focus-visible {outline:2px solid var(--periwinkle);outline-offset:3px}
   </style>
   <link rel="stylesheet" href="workbench-hosts.css">
+  <link rel="stylesheet" href="progress-case.css">
 </head>
 <body data-theme="warm">
 
@@ -2709,7 +2710,8 @@
       function typingDuration(sc) { return (sc.inputs[sc.focusedPane] || "").length * TYPE_CHAR_MS; }
       function sceneDuration(sc) {
         const last = Math.max(0, ...Object.values(sc.panes).flatMap(p => (p.steps || []).map(x => x.at || 0)));
-        return Math.max(SCENE_DURATION_MS, typingDuration(sc) + last + 950);
+        const localCaseMinimum = new URLSearchParams(location.search).get("case") === "progress" && sc.id === "execute" ? 11000 : SCENE_DURATION_MS;
+        return Math.max(localCaseMinimum, typingDuration(sc) + last + 950);
       }
       function syncClock() {
         if (!isEffectivelyRunning()) {
@@ -2862,6 +2864,7 @@
             bar.style.width = "0%";
           }
         });
+        window.dispatchEvent(new Event("superaris:demo-update"));
       }
 
       function loadScene(index, opts) {
@@ -3129,10 +3132,11 @@
 
       // Initialize
       applyLanguage(new URLSearchParams(location.search).get("lang") === "zh" ? "zh" : "en");
-      loadScene(0, { revealImmediately: state.reducedMotion });
+      loadScene(new URLSearchParams(location.search).get("case") === "progress" ? 2 : 0, { revealImmediately: state.reducedMotion });
       syncClock();
     })();
   </script>
   <script src="workbench-hosts.js"></script>
+  <script src="progress-case.js"></script>
 </body>
 </html>
