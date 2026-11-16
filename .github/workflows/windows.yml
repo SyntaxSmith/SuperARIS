@@ -22,7 +22,7 @@ jobs:
       - name: Native process, pipe, runtime and resource contracts
         run: |
           New-Item -ItemType Directory -Force windows-evidence | Out-Null
-          python -m pytest -q --basetemp=windows-evidence/pytest tests/test_windows_platform.py tests/test_windows_runtime.py tests/test_workbench_tasks.py tests/test_workbench_client.py tests/test_workbench_context.py tests/test_installed_package.py tests/test_orca_hosts.py tests/test_orca_context.py tests/test_orca_runtime.py tests/test_orca_transport.py tests/test_orca_receiver.py tests/test_orca_wizard.py tests/test_updater.py tests/test_updater_install.py
+          python -m pytest -q --basetemp=windows-evidence/pytest tests/test_windows_platform.py tests/test_windows_runtime.py tests/test_workbench_tasks.py tests/test_workbench_client.py tests/test_workbench_context.py tests/test_installed_package.py tests/test_orca_hosts.py tests/test_orca_context.py tests/test_orca_runtime.py tests/test_orca_transport.py tests/test_orca_receiver.py tests/test_orca_wizard.py tests/test_updater.py tests/test_updater_install.py tests/test_board.py tests/test_board_terminal.py tests/test_agy_modes.py
       - name: Isolated installed consumer and pinned ARIS helper
         if: ${{ !cancelled() }}
         run: python scripts/verify_install.py 'dist/*.whl'
@@ -31,7 +31,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $release = Invoke-RestMethod 'https://api.github.com/repos/herdrdev/herdr/releases/tags/v0.9.5'
+          $release = Invoke-RestMethod 'https://api.github.com/repos/herdrdev/herdr/releases/tags/v0.9.5' -Headers @{ Accept = 'application/vnd.github+json'; Authorization = "Bearer $env:GH_TOKEN" }
           $asset = $release.assets | Where-Object name -eq 'herdr-windows-x86_64.zip'
           $headers = @{ Accept = 'application/octet-stream'; Authorization = "Bearer $env:GH_TOKEN" }
           Invoke-WebRequest $asset.url -Headers $headers -OutFile "$env:RUNNER_TEMP/herdr.zip"

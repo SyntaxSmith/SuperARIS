@@ -97,9 +97,13 @@ superaris start /path/to/project --session research-demo --preset cc-codex --onl
 
 Use `--skill NAME` repeatedly for pipeline/workflow/individual selections,
 `--model ROLE=MODEL` for new-role requests and `--name TEXT` for new readable
-workbench titles. The AGY wizard offers Argon High, Carbon High and Hydrogen High shortcuts
-(`gemini-4-argon-high`, `gemini-4-carbon-high`, `gemini-4-hydrogen-high`)
-for any AGY role, alongside native settings and a manually entered ID. Native
+workbench titles. The AGY wizard retains Argon High, Carbon High and Hydrogen High,
+and adds Orchestrator (Carbon) (`gemini-pro-orchestrator`), Orchestrator (Argon)
+(`gemini-pro-orchestrator-argon`) and Hydrogen XHigh (`gemini-4-hydrogen-xhigh`)
+for any AGY role, alongside native settings and a manually entered ID or native
+display name. Orchestrator combines planning and execution inside one session;
+it is not a new team role or a fixed single-model identity. No extra effort
+argument is imposed. Existing sessions keep their recorded choices. Native
 settings remain the default; returning to a selection retains its chosen model.
 Actual model identity comes from native results. Scopes are
 ownership instructions, not an OS sandbox. Adopted owners retain their topology;

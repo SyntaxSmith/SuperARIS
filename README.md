@@ -41,6 +41,8 @@ For Orca, install and open the [official app](https://www.onorca.dev/) first; if
 
 ## 2. 📢 News
 
+- **2026-11-16** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 📊 **See your team's handoffs:** inspect waits, reports and next steps in the browser board, auto-refreshing terminal view or an independent Herdr progress tab. Try the new two-tab homepage case and open its full browser view ([#9](https://github.com/wanshuiyin/SuperARIS/pull/9), [guide](docs/BOARD.md), [interactive case](https://wanshuiyin.github.io/SuperARIS/?case=progress&lang=en#workbench)).
+- **2026-11-16** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🧩 Choose AGY Orchestrator Carbon/Argon or Hydrogen XHigh alongside existing model options. Short phase plans, evidence handoffs and bounded member-to-member clarification reuse the original task records and MCP collaboration ([#9](https://github.com/wanshuiyin/SuperARIS/pull/9)).
 - **2026-11-14** — ![FIX](https://img.shields.io/badge/FIX-2ea44f?style=flat-square) 🛟 Herdr now notifies you when receiving is paused because the original main cannot be verified; startup failures show the error and diagnostic log path ([#8](https://github.com/wanshuiyin/SuperARIS/pull/8)).
 - **2026-11-14** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🔄 Update from the terminal with `superaris update --check` and `superaris update`: verify the actual Git commit, including same-version changes, while preserving project records and agent sessions. Refresh receiving through the original project commands ([#7](https://github.com/wanshuiyin/SuperARIS/pull/7), [guide](docs/DEPENDENCIES.md#updates)).
 - **2026-11-13** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🧠 **Bring Gemini into research from the start:** the expanded Research & Writing role spans ideas, methods and substantive paper writing, with new Carbon/Hydrogen model choices. Explicitly automation-owned AGY sessions on Herdr can pick up reports and continue in the same conversation. ARIS workflows, skills and MCP collaboration remain available ([#5](https://github.com/wanshuiyin/SuperARIS/pull/5), [#6](https://github.com/wanshuiyin/SuperARIS/pull/6)).
@@ -193,6 +195,7 @@ The confirmed startup can install missing Herdr using its official Windows insta
 
 - [Windows setup and support scope](docs/WINDOWS.md)
 - [Workbench, roles, and human handoff](docs/WORKBENCH.md)
+- [Read-only collaboration progress board](docs/BOARD.md): `superaris board PROJECT --open`
 - [Skills, context, and recovery](docs/PROJECT_CONTEXT.md)
 - [Follow-up and project memory](docs/RESULTS_AND_MEMORY.md)
 - [ARIS source, dependencies, and updates](docs/DEPENDENCIES.md)

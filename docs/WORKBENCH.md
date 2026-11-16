@@ -16,12 +16,20 @@ Herdr is attached after you handle actual native login/trust prompts. It never
 answers them for you or blindly resends an unknown initial task.
 
 The AGY model menu offers Gemini 4 Argon High (`gemini-4-argon-high`), Carbon
-High (`gemini-4-carbon-high`) and Hydrogen High (`gemini-4-hydrogen-high`) for
-any role, including main. Native CLI settings remain the default; manual IDs
-are also available. Back retains the selected model, and existing teams keep
+High (`gemini-4-carbon-high`) and Hydrogen High (`gemini-4-hydrogen-high`), plus
+Orchestrator (Carbon) (`gemini-pro-orchestrator`), Orchestrator (Argon)
+(`gemini-pro-orchestrator-argon`) and Hydrogen XHigh (`gemini-4-hydrogen-xhigh`)
+for any role, including main. Orchestrator coordinates planning and execution
+within one native session, not an extra team role or a fixed single-model identity;
+SuperARIS does not add an effort argument. Native CLI settings remain the default;
+manual IDs and native display names are also available. Back retains the selected model, and existing teams keep
 their recorded requests rather than adopting new menu choices.
 
 ## Explicit commands
+
+Use [the read-only collaboration board](BOARD.md) to inspect current recorded
+waits, reports and next authorized actions: `superaris board PROJECT`, or add
+`--open` for the local browser view. This does not dispatch work or probe live agents.
 
 `start PROJECT --plan` previews without starting native processes. Every new
 preset defaults to main/engineer/writer: Codex/Codex/Codex, CC/Codex/CC, or
