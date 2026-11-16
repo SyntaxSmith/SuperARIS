@@ -31,7 +31,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $release = Invoke-RestMethod 'https://api.github.com/repos/herdrdev/herdr/releases/tags/v0.9.5'
+          $release = Invoke-RestMethod 'https://api.github.com/repos/herdrdev/herdr/releases/tags/v0.9.5' -Headers @{ Accept = 'application/vnd.github+json'; Authorization = "Bearer $env:GH_TOKEN" }
           $asset = $release.assets | Where-Object name -eq 'herdr-windows-x86_64.zip'
           $headers = @{ Accept = 'application/octet-stream'; Authorization = "Bearer $env:GH_TOKEN" }
           Invoke-WebRequest $asset.url -Headers $headers -OutFile "$env:RUNNER_TEMP/herdr.zip"
