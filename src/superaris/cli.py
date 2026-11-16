@@ -107,6 +107,14 @@ def parser(prog: str = "superaris") -> argparse.ArgumentParser:
     sub = p.add_subparsers(dest="command", required=True)
     update = sub.add_parser("update", help="update this installation from official SuperARIS main")
     update.add_argument("--check", action="store_true", help="check installed/latest Git revision without installing")
+    board = sub.add_parser("board", help="read-only collaboration progress from project records")
+    board.add_argument("project", type=Path)
+    display = board.add_mutually_exclusive_group()
+    display.add_argument("--json", action="store_true")
+    display.add_argument("--serve", action="store_true", help="serve a read-only loopback view until Ctrl+C")
+    display.add_argument("--open", action="store_true", help="serve and open the browser view")
+    board.add_argument("--port", type=int, default=0, help="loopback port (default: automatic)")
+    board.add_argument("--lang", choices=["zh", "en"], help="view language; project preferences are unchanged")
     s = sub.add_parser("start", help="start or reconnect the selected project owners")
     p.start_parser = s
     s.add_argument("project", type=Path, nargs="?")
@@ -267,6 +275,13 @@ def main(argv: list[str] | None = None, *, prog: str = "superaris") -> int:
             project = args.project.expanduser().resolve()
             if not project.is_dir():
                 raise ValueError("Selected project directory does not exist")
+            if args.command == "board":
+                from .board import collect, render, serve
+                if args.serve or args.open:
+                    return serve(project, args.port, args.open, args.lang)
+                data = collect(project)
+                print(json.dumps(data, ensure_ascii=False, indent=2) if args.json else render(data, args.lang))
+                return 0
             if args.command == "usage":
                 import math
                 from .usage import collect, render
