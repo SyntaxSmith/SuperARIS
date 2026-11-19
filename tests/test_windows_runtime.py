@@ -190,3 +190,80 @@ def test_windows_crt_permission_error_without_winerror_is_bounded_metadata_only(
         return "original local metadata"
     assert state._metadata_io(metadata) == "original local metadata"
     assert len(calls) == 2
+
+
+@pytest.mark.parametrize("scenario,operation,observation", [
+    ("start-missing", "agent start", "同一 Herdr 会话当前找不到该窗格"),
+    ("verify-shell", "agent get", "当前只观察到其 shell 在前台"),
+    ("reentry-client", "agent get", "观察到 claude 前台进程"),
+    ("reentry-no-process-info", "agent get", "未能读取可确认的前台进程"),
+])
+def test_startup_missing_agent_inspects_original_target_without_resending(portable_team, scenario, operation, observation):
+    project, fake = portable_team
+    script = fake["binary"].with_suffix(".py") if os.name == "nt" else fake["binary"]
+    code = script.read_text(encoding="utf-8")
+    anchor = 'if args == ["status"]:'
+    assert code.count(anchor) == 1
+    script.write_text(code.replace(anchor, '''def failure(request, code, message):
+    save()
+    print(json.dumps({"id": request, "error": {"code": code, "message": message}}), file=sys.stderr)
+    raise SystemExit(1)
+
+scenario = state.get("diagnostic_scenario")
+pane = "w1:p1"
+if scenario == "start-missing" and args[:2] == ["agent", "start"]:
+    failure("cli:agent:start", "agent_pane_not_found", f"agent target pane {pane} not found")
+if scenario and args == ["agent", "get", pane]:
+    failure("cli:agent:get", "agent_not_found", f"agent target {pane} not found")
+if scenario and args == ["pane", "get", pane]:
+    if scenario == "start-missing":
+        failure("cli:pane:get", "pane_not_found", "pane not found")
+    output({"pane": {"pane_id": pane, "workspace_id": "w1"}})
+if scenario and args == ["pane", "process-info", "--pane", pane]:
+    if scenario == "reentry-no-process-info":
+        failure("cli:pane:process_info", "internal", "process observation unavailable")
+    shell_pid = 1002
+    process = {"pid": shell_pid, "argv": ["powershell.exe"], "cwd": state["project"]}
+    if scenario == "reentry-client":
+        process = {"pid": 1001, "argv": ["claude.exe"], "cwd": state["project"]}
+    output({"process_info": {"pane_id": pane, "shell_pid": shell_pid, "foreground_processes": [process]}})
+
+''' + anchor, 1), encoding="utf-8")
+    path = state.directory(project) / "launch.json"
+    options = ("--only-role", "main", "--preset", "cc-codex")
+    if scenario.startswith("reentry"):
+        first = start(project, fake, *options)
+        assert first.returncode == 0, first.stderr
+        bound = state.read(path)
+        assert bound["roles"]["main"]["pid"] == 1001
+    else:
+        # The confirmed Chinese wizard saves this selection before launching.
+        bound = {"project": str(project), "roles": {}, "session": "isolated-test", "preset": "cc-codex"}
+    bound["ui_language"] = "zh"
+    state.write(path, bound)
+    before = path.read_bytes()
+    transport = state.read(fake["state"])
+    previous_commands = len(transport["commands"])
+    transport["diagnostic_scenario"] = scenario
+    state.write(fake["state"], transport)
+
+    result = start(project, fake, *options)
+    assert result.returncode == 1 and observation in result.stderr, result.stderr
+    assert f"Herdr {operation} — isolated-test / w1:p1:" in result.stderr
+    assert "agent target" in result.stderr and "not found" in result.stderr
+    from superaris.platform import command_line
+    for command in (["pane", "get", "w1:p1"], ["pane", "process-info", "--pane", "w1:p1"]):
+        assert command_line([str(fake["binary"]), "--session", "isolated-test", *command]) in result.stderr
+    commands = state.read(fake["state"])["commands"][previous_commands:]
+    assert ["pane", "get", "w1:p1"] in commands
+    assert (["pane", "process-info", "--pane", "w1:p1"] in commands) == (scenario != "start-missing")
+    assert not any(c[:2] in (["agent", "prompt"], ["pane", "send-keys"], ["pane", "split"]) for c in commands)
+    if scenario.startswith("reentry"):
+        assert path.read_bytes() == before
+        assert not any(c[:2] in (["agent", "start"], ["workspace", "create"]) for c in commands)
+    else:
+        original = state.read(path)
+        assert original["roles"]["main"]["delivery"]["phase"] == "unknown"
+        assert original["pending_start"]["roles"][0]["role"] == "main"
+        assert sum(c[:2] == ["agent", "start"] for c in commands) == 1
+        assert sum(c[:2] == ["workspace", "create"] for c in commands) == 1

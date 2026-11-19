@@ -9,7 +9,7 @@ import shutil
 import subprocess
 import time
 
-from .platform import WINDOWS, detached_process_options
+from .platform import WINDOWS, command_line, detached_process_options
 from .transport import connect, endpoint_exists
 
 
@@ -164,6 +164,66 @@ def foreground(info: dict, kind: str | None = None) -> dict:
     if len(matches) != 1:
         raise HerdrError("Expected one recognizable foreground agent; inspect actual pane before sending input")
     return matches[0]
+
+
+def _error_body(error: HerdrError) -> dict:
+    try:
+        body = json.loads(str(error))
+    except ValueError:
+        return {}
+    if not isinstance(body, dict):
+        return {}
+    body = body.get("error", body)
+    return body if isinstance(body, dict) else {}
+
+
+def startup_target_diagnostic(client: Herdr, error: HerdrError, operation: str,
+                              pane: str, kind: str, language: str) -> str | None:
+    """Describe this startup failure using only observations of the same target."""
+    original = _error_body(error)
+    code = original.get("code")
+    if code not in ("agent_not_found", "agent_pane_not_found"):
+        return None
+    from .ui import tr
+
+    pane_call = ("pane", "get", pane)
+    process_call = ("pane", "process-info", "--pane", pane)
+    try:
+        client.json(*pane_call, timeout=3)
+    except HerdrError as exc:
+        observation = ("同一 Herdr 会话当前找不到该窗格。" if _error_body(exc).get("code") == "pane_not_found"
+                       else "无法核实该窗格；请查看下方命令的实际返回。")
+    else:
+        try:
+            info = client.json(*process_call, timeout=3).get("process_info", {})
+        except HerdrError:
+            info = {}
+        processes = info.get("foreground_processes", [])
+        shell_pid = info.get("shell_pid")
+        if shell_pid and [item.get("pid") for item in processes] == [shell_pid]:
+            observation = "窗格存在；当前只观察到其 shell 在前台。"
+        elif processes:
+            try:
+                observed = foreground(info, kind)
+            except HerdrError:
+                observation = "窗格存在且有前台进程；请核对其身份。"
+            else:
+                observation = tr("窗格存在，观察到 {kind} 前台进程，但 Herdr 未确认原 Agent 身份。",
+                                 lang=language, kind=observed["kind"])
+        else:
+            observation = "窗格存在；未能读取可确认的前台进程。"
+
+    binary = shutil.which(client.binary) or client.binary
+    if os.path.dirname(binary):
+        binary = os.path.abspath(binary)
+    prefix = [binary, "--session", client.session]
+    return "\n".join([
+        f"Herdr {operation} — {client.session} / {pane}: {original.get('message', str(error))} ({code})",
+        tr(observation, lang=language),
+        tr("启动记录已保留。可在当前终端运行以下只读命令检查同一会话：", lang=language),
+        command_line([*prefix, *pane_call]),
+        command_line([*prefix, *process_call]),
+    ])
 
 
 def verify_owner(client: Herdr, role: dict, project: Path) -> dict:

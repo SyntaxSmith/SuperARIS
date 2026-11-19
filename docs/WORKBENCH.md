@@ -15,6 +15,13 @@ roles and tasks. Existing labels/layout stay intact. Startup continues while
 Herdr is attached after you handle actual native login/trust prompts. It never
 answers them for you or blindly resends an unknown initial task.
 
+If startup reports `agent_not_found` or `agent_pane_not_found`, SuperARIS shows
+the failing Herdr command, the recorded session and pane, and what it could
+observe there. Run the printed `pane get` and `pane process-info` commands in the
+same terminal to check again. A missing pane, a shell in the foreground, and a
+foreground client whose agent identity is unverified call for different follow-up.
+Startup keeps the original binding and delivery record for inspection.
+
 The AGY model menu offers Gemini 4 Argon High (`gemini-4-argon-high`), Carbon
 High (`gemini-4-carbon-high`) and Hydrogen High (`gemini-4-hydrogen-high`), plus
 Orchestrator (Carbon) (`gemini-pro-orchestrator`), Orchestrator (Argon)

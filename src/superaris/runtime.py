@@ -1,13 +1,14 @@
 """Project-owned native sessions and generated launch records."""
 from __future__ import annotations
 
+from contextlib import contextmanager
 from pathlib import Path
 import os
 import re
 import shutil
 import subprocess
 
-from .client import Herdr, HerdrError, foreground, verify_owner
+from .client import Herdr, HerdrError, foreground, startup_target_diagnostic, verify_owner
 from .context import prepare_context
 from .delivery import deliver
 from .state import directory, launch_lock, read, write
@@ -60,6 +61,18 @@ def _agent_name(project: Path, role: str, agents: list[dict]) -> str:
     raise HerdrError("No free live agent name; inspect the selected session")
 
 
+@contextmanager
+def _startup_target(client, operation: str, pane: str, kind: str, language: str):
+    try:
+        yield
+    except HerdrError as exc:
+        if getattr(client, "host", None) != "orca":
+            diagnostic = startup_target_diagnostic(client, exc, operation, pane, kind, language)
+            if diagnostic is not None:
+                raise HerdrError(diagnostic) from exc
+        raise
+
+
 def start(plan: dict, args, *, stop_event=None) -> dict:
     project = Path(plan["project"])
     with launch_lock(project):
@@ -79,6 +92,7 @@ def start(plan: dict, args, *, stop_event=None) -> dict:
             client.ensure(directory(project) / "server.log", install=not args.no_install)
             verify_caller(client, args.caller_pane, args.caller_native_session)
         current = old or {"project": str(project), "session": plan["session"], "roles": {}, "preset": plan["preset"]}
+        language = current.get("ui_language") or "en"
         current["aris_repo"] = str(aris_repo)
         if host == "orca":
             current.update(host="orca", orca_bin=client.binary, execution_environment="local")
@@ -177,7 +191,8 @@ def start(plan: dict, args, *, stop_event=None) -> dict:
             if existing:
                 if host == "orca" and not existing.get("pane_id"):
                     raise HerdrError("Original Orca launch outcome is unknown; inspect its saved receipt and workspace before recovering this role")
-                live = verify_owner(client, existing, project)
+                with _startup_target(client, "agent get", existing["pane_id"], existing["harness"], language):
+                    live = verify_owner(client, existing, project)
                 current["roles"][role] = live
                 if existing.get("delivery", {}).get("phase") in {"attempting", "unknown"}:
                     actions.append({"role": role, "action": "pending_unknown", "delivery": existing["delivery"]})
@@ -307,9 +322,11 @@ def start(plan: dict, args, *, stop_event=None) -> dict:
                 if kind != "codex":
                     record["delivery"]["phase"] = "attempting"
                     save_binding(project, current)
-                client.json("agent", "start", name, "--kind", kind, "--pane", pane, "--timeout", "120000", "--",
-                            *_native_args(kind, project, None if kind == "codex" else context["prompt"], selected["model"]), timeout=125)
-                current["roles"][role] = verify_owner(client, record, project)
+                with _startup_target(client, "agent start", pane, kind, language):
+                    client.json("agent", "start", name, "--kind", kind, "--pane", pane, "--timeout", "120000", "--",
+                                *_native_args(kind, project, None if kind == "codex" else context["prompt"], selected["model"]), timeout=125)
+                with _startup_target(client, "agent get", pane, kind, language):
+                    current["roles"][role] = verify_owner(client, record, project)
                 if kind == "codex":
                     # Separate startup readiness from a potentially long first task.
                     # The brand-new pane has no earlier user input; still inspect its surface.
