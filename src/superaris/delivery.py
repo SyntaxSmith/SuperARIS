@@ -6,15 +6,30 @@ import re
 from .client import Herdr, HerdrError, verify_owner, read_screen, send_prompt, notify
 
 
+CODEX_PLACEHOLDER = "Ask Codex to do anything"
+
+
 def codex_input(text: str) -> str | None:
-    clean = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", text)
-    prompts = [line.strip()[1:].strip() for line in clean.splitlines() if line.lstrip().startswith("›")]
-    return prompts[-1] if prompts else None
+    lines = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", text).rstrip().splitlines()
+    for index in reversed(range(len(lines))):
+        # The composer starts in column zero. A quoted › on a continuation row is draft text.
+        if not lines[index].startswith("›"):
+            continue
+        first = lines[index][1:].strip()
+        rest = lines[index + 1:]
+        if first == CODEX_PLACEHOLDER and rest and not rest[0].strip():
+            # The idle footer follows a padding row. Its status and shortcut hint can wrap.
+            footer = [row.strip() for row in rest[1:]]
+            idle_hint = r"(?:^| )(?:← for agents|\? for shortcuts)(?:\s+⚠.*)?$"
+            if all(footer) and re.search(idle_hint, " ".join(footer)):
+                return first
+        return "\n".join([first, *rest])
+    return None
 
 
 def empty_codex_input(text: str) -> bool:
     """Only the actual empty Codex placeholder tested by this adapter is eligible."""
-    return codex_input(text) in {"", "Ask Codex to do anything"}
+    return codex_input(text) in {"", CODEX_PLACEHOLDER}
 
 
 def automatic_input_supported(client, role: dict) -> bool:

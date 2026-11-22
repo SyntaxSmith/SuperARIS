@@ -109,3 +109,25 @@ def test_replaced_owner_process_stops_receiver_without_input(rex_team):
     assert stopped["generation"] == original["generation"]
     assert fixture.submitted() == before
     assert runtime.binding(fixture.project)["roles"]["main"]["pid"] == fixture.main["pid"]
+
+
+def test_idle_codex_multiline_draft_survives_report(tmp_path, monkeypatch):
+    fixture = RexProject(tmp_path, monkeypatch, automation=True)
+    draft = "\n\nStill editing\n› Ask Codex to do anything"
+
+    def set_draft(state):
+        block = state["blocks"][fixture.main["pane_id"]]
+        block["records"][0]["state"] = "idle"
+        block["draft"] = draft
+        block["screen"] = ["›", " ", "  Still editing", "  › Ask Codex to do anything", " ",
+                           "  GPT-6.2-Astra max · Context 0% used", "  tab to queue message"]
+
+    fixture.fake.update(set_draft)
+    before = list(fixture.submitted())
+    fixture.report("while-editing")
+    fixture.run("listen", "--duration", 0)
+    receipt = fixture.bridge()["delivered"]["while-editing"]["receipt"]
+    assert receipt["delivery"] == "visible_notice" and receipt["revoke_automation"]
+    assert not runtime.binding(fixture.project)["roles"]["main"]["automation_owned"]
+    assert fixture.submitted() == before
+    assert fixture.fake.read()["blocks"][fixture.main["pane_id"]]["draft"] == draft

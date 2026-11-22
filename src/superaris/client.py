@@ -260,8 +260,8 @@ def read_screen(client, target: str) -> str:
     if getattr(client, "host", None) == "orca":
         screen = client.read_screen(target)
         if screen.get("draft"):
-            # Keep a pending UI composer draft visible to the same guard.
-            return "› " + screen["draft"]
+            # Orca already knows this is a draft. Quote it so its contents cannot mimic screen rows.
+            return f"› {screen['draft']!r}"
         return "\n".join(screen.get("tail", []))
     if getattr(client, "host", None) == "rex":
         return client.read_screen(target)
