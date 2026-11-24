@@ -97,6 +97,10 @@ class Orca:
             arguments += ["--model", model]
         return self.call(*arguments, timeout=125)
 
+    def rename_terminal(self, handle: str, title: str) -> dict:
+        """Name a newly created role tab through the official Orca operation."""
+        return self.call("terminal", "rename", "--terminal", handle, "--title", title)
+
     def open_ui(self, handle: str | None = None) -> dict:
         self.ensure_ready()
         if handle:

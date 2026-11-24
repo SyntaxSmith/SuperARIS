@@ -25,6 +25,7 @@ test = ["pytest>=7"]
 
 [project.scripts]
 superaris = "superaris.cli:main"
+mathrsi = "superaris.cli:mathrsi_main"
 
 [project.urls]
 Repository = "https://github.com/wanshuiyin/SuperARIS"

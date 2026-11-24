@@ -43,7 +43,7 @@ def select(monkeypatch, tmp_path, answers, available, bound=None):
 @pytest.mark.parametrize("language", ["1", "2"])
 def test_custom_without_codex_selects_models_and_same_host_plan(monkeypatch, tmp_path, capsys, host, language):
     project = tmp_path / "custom project"
-    answers = [language, str(project), "4", "3", "2", "3",
+    answers = [language, str(project), "1", "4", "3", "2", "3",
                "2", "main-model", "2", "engineer-model", "2", "writer-model", "", "", "1"]
     selection, prompts = select(monkeypatch, tmp_path, answers, caps(host))
     assert selection.create_project and not project.exists()
@@ -75,7 +75,7 @@ def test_custom_without_codex_selects_models_and_same_host_plan(monkeypatch, tmp
 @pytest.mark.parametrize("client,number", [("claude", "2"), ("agy", "3")])
 def test_one_installed_client_can_fill_all_three_roles(monkeypatch, tmp_path, client, number):
     selection, _ = select(monkeypatch, tmp_path,
-                          ["2", str(tmp_path), "4", number, number, number, "", "", "", "", "", "1"],
+                          ["2", str(tmp_path), "1", "4", number, number, number, "", "", "", "", "", "1"],
                           caps(clients=(client,)))
     args = cli.parser().parse_args(selection.arguments)
     assert cli.assignments(args.role) == dict.fromkeys(TEAM, client)
@@ -83,7 +83,7 @@ def test_one_installed_client_can_fill_all_three_roles(monkeypatch, tmp_path, cl
 
 
 def test_no_clients_explains_missing_dependency_without_writing(monkeypatch, tmp_path, capsys):
-    selection, _ = select(monkeypatch, tmp_path, ["2", str(tmp_path / "absent")], caps(clients=()))
+    selection, _ = select(monkeypatch, tmp_path, ["2", str(tmp_path / "absent"), "1"], caps(clients=()))
     assert selection is None and list(tmp_path.iterdir()) == []
     output = capsys.readouterr().out
     assert "No agent client was found" in output
@@ -92,15 +92,15 @@ def test_no_clients_explains_missing_dependency_without_writing(monkeypatch, tmp
 
 def test_unavailable_custom_client_is_not_selected(monkeypatch, tmp_path, capsys):
     selection, _ = select(monkeypatch, tmp_path,
-                          ["2", str(tmp_path), "4", "1", "3", "3", "3", "", "", "", "", "", "1"],
+                          ["2", str(tmp_path), "1", "4", "1", "3", "3", "3", "", "", "", "", "", "1"],
                           caps(clients=("agy",)))
     assert set(cli.assignments(cli.parser().parse_args(selection.arguments).role).values()) == {"agy"}
     assert "Choose an available local client" in capsys.readouterr().out
 
 
 def test_back_keeps_custom_roles_and_cancel_writes_nothing(monkeypatch, tmp_path):
-    answers = ["2", str(tmp_path / "uncreated"), "4", "3", "2", "3", "", "", "", "", "", "2",
-               "", "", "", "", "", "", "", "", "", "", "3"]
+    answers = ["2", str(tmp_path / "uncreated"), "1", "4", "3", "2", "3", "", "", "", "", "", "2",
+               "", "1", "", "", "", "", "", "", "", "", "", "3"]
     selection, prompts = select(monkeypatch, tmp_path, answers, caps())
     assert selection is None and list(tmp_path.iterdir()) == []
     combo = [p for p in prompts if "Client combination" in p]
