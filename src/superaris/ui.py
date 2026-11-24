@@ -3,6 +3,17 @@
 language = "zh"
 
 _EN = {
+    "数学主研": "Research lead",
+    "构造与计算": "Construction & computation",
+    "证明与推导": "Proof & derivation",
+    "研究模式": "Research mode",
+    "ARIS：通用科研": "ARIS: general research",
+    "MathRSI：数学研究": "MathRSI: mathematical research",
+    "MathRSI 仓库目录（或设置 MATHRSI_REPO）": "MathRSI checkout directory (or set MATHRSI_REPO)",
+    "数学领域插件（可留空，填写 plugins 下目录名）": "Mathematical domain plugin (optional directory name under plugins)",
+    "工作台：{brand} · {name}": "Workbench: {brand} · {name}",
+    "研究模式：{profile}": "Research mode: {profile}",
+
     "手动输入模型 ID 或原生名称": "Enter a model ID or native display name",
     "Orchestrator 在同一会话内协调规划与执行，不增加团队角色。": "Orchestrator coordinates planning and execution within one session; it adds no team role.",
     '未知': 'unknown',
@@ -131,3 +142,7 @@ ROLE_LABELS = {"main": "主会话：统筹、恢复与验收", "engineer": "工�
 
 def role_label(role: str, *, lang: str | None = None) -> str:
     return tr(ROLE_LABELS.get(role, role), lang=lang)
+
+
+def mathrsi_role_label(role: str, *, lang: str | None = None) -> str:
+    return tr({"main": "数学主研", "engineer": "构造与计算", "writer": "证明与推导"}.get(role, role), lang=lang)

@@ -12,6 +12,7 @@ import shutil
 
 from .dependencies import productcommand, resolve_aris_repo
 from .state import read
+from .mathrsi import resolve_profile, resource_index, prepare_guidance
 
 
 _PROJECT_FILES = (
@@ -89,7 +90,7 @@ def _native_roots(project: Path, harness: str) -> list[Path]:
     return [home / ".gemini/config/skills"]
 
 
-def _startup_entry(project: Path, harness: str) -> tuple[Path, Path]:
+def _startup_entry(project: Path, harness: str, math_profile: bool = False) -> tuple[Path, Path]:
     """Wire the native project instruction convention without replacing user text."""
     entry = project / _STARTUP_FILES[harness]
     if harness == "codex":
@@ -107,7 +108,8 @@ def _startup_entry(project: Path, harness: str) -> tuple[Path, Path]:
         "Recover your current role, task, original owner and authorization from the original project instructions "
         "and current .aris/workbench/launch.json binding; do not infer a role from this shared entry. "
         "Then read that role's navigation, scope, current project state and required SKILL.md/resources before authorized action. "
-        "LATEST_PREPARED.md locates preparation, not an active or delivered task. Compare it with the current owner "
+        + ("That role navigation links mathrsi.md with the original release skills, domain resources and mathematical recovery rules. " if math_profile else "")
+        + "LATEST_PREPARED.md locates preparation, not an active or delivered task. Compare it with the current owner "
         "and binding before using it. Preserve original goals, paused state, budgets, model/MCP routes, reviewer "
         "freshness and merge authorization.\n"
     ).encode("utf-8") + _ENTRY_END
@@ -320,7 +322,10 @@ def prepare_context(
     repo = Path(repo).expanduser().resolve() if repo is not None else resolve_aris_repo()
     host_root = repo / "skills" / "skills-codex" if harness == "codex" else repo / "skills"
     host_root = _within(host_root, repo, "Skill host directory")
-    selected = _dependency_closure(repo, skills)
+    research_profile = resolve_profile(project)
+    math_profile = research_profile if research_profile and research_profile["profile"] == "mathrsi" else None
+    math_index = resource_index(math_profile, harness) if math_profile else {}
+    selected = _dependency_closure(repo, [s for s in skills if s not in math_index])
     roots = _native_roots(project, harness)
     sources = []
     for skill in selected:
@@ -412,21 +417,31 @@ def prepare_context(
         skill_index[skill] = str(destination / "SKILL.md")
         provenance.append(f"- {skill}: selected `{chosen}`; resolved source `{source}` → copy `{destination}`; shared references `{source_shared}`")
 
-    startup_entry, startup_source = _startup_entry(project, harness)
+    startup_entry, startup_source = _startup_entry(project, harness, bool(math_profile))
     if startup_source not in originals:
         originals.append(startup_source)
     navigation = _navigation(project, role, harness, task, scopes, repo, run, skill_index, originals, workbench_host)
+    math_guidance = None
+    if math_profile:
+        math_guidance = prepare_guidance(math_profile, role, run, math_index)
+        skill_index.update(math_index)
+        skill_files.extend(path for name, path in math_index.items() if name in skills)
+        for target in (Path(navigation["navigation"]), Path(navigation["role_file"]), Path(navigation["recovery_file"])):
+            with target.open("a", encoding="utf-8") as stream:
+                stream.write(f"\nRequired mathematical profile guidance: `{math_guidance}`. Read it and its actual release skill index before mathematical work or recovery.\n")
     packet = run / "packet.md"
     original_lines = "\n".join(f"- `{path}`" for path in originals) or "- No standard project or recovery files found."
     recovery_lines = "\n".join(f"- `{path}`" for path in recovery_files) or "- No explicit recovery files supplied."
     scope_lines = "\n".join(f"- `{path}`" for path in scopes) or "- No write scope supplied; obtain scope from the existing project authorization before editing."
-    skill_lines = "\n".join(f"- {name}: `{path}`" for name, path in skill_index.items())
+    skill_lines = "\n".join(f"- {name}: `{path}`" for name, path in skill_index.items()
+                            if name not in math_index or name in skills)
     precedence = " → ".join(f"`{root}/<name>`" for root in roots)
     precedence += " → bundled SuperARIS project-agent (for that product skill only)"
     precedence += f" → `{host_root}/<name>`"
     packet.write_text(
         f"# ARIS project role context\n\nRole: {role}\nHarness: {harness}\nWorkbench host: {workbench_host}\nProject: `{project}`\n"
         + (f"Required workbench instructions: `{navigation['host_reference']}`. Read before host operations.\n\n" if navigation["host_reference"] else "")
+        + (f"Required MathRSI profile guidance: `{math_guidance}`. Read the stage appropriate to your assigned obligation and original project recovery before mathematical action.\n\n" if math_guidance else "")
         + f"Source ARIS checkout: `{repo}`\n\n## Prepared context task\n\n{task}\n\n"
         "This is a preparation snapshot; the original owner and current binding determine your current assignment. "
         "A candidate task here does not replace that assignment.\n\n"
@@ -473,6 +488,7 @@ def prepare_context(
     )
     return {
         **navigation,
+        **({"research_profile": math_profile, "mathrsi_guidance": str(math_guidance), "mathrsi_skill_index": math_index} if math_profile else {}),
         "startup_files": [str(startup_entry)],
         "startup_entry": str(startup_entry),
         "startup_source": str(startup_source),

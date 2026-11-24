@@ -22,6 +22,8 @@ class _ArgumentParser(argparse.ArgumentParser):
                 # Resolve explicit paths in the invoking cwd, before execution
                 # changes to the project or pending startup is resumed elsewhere.
                 parsed.orca_bin = str(Path(parsed.orca_bin).expanduser().resolve())
+            if getattr(parsed, "mathrsi_repo", None) is not None:
+                parsed.mathrsi_repo = parsed.mathrsi_repo.expanduser().resolve()
             # Recovery can be opened from another cwd. Keep the wizard's
             # canonical prefix and serialize the parsed options unchanged.
             canonical = ["start", str(parsed.project.expanduser().resolve())]
@@ -57,6 +59,15 @@ def make_plan(args: argparse.Namespace) -> dict:
         raise ValueError(f"project directory does not exist: {project}")
     from .state import directory, read
     current = read(directory(project) / "launch.json", {})
+    from .mathrsi import resolve_profile
+    saved_profile = read(directory(project) / "research-profile.json", {})
+    if current and not saved_profile and getattr(args, "profile", None) == "mathrsi":
+        raise ValueError("Existing ARIS workbench cannot be converted to MathRSI; choose a new project")
+    if not saved_profile and getattr(args, "profile", None) != "mathrsi" and (
+            getattr(args, "mathrsi_repo", None) or getattr(args, "mathrsi_plugin", None)):
+        raise ValueError("MathRSI options require --profile mathrsi for a new project")
+    research_profile = resolve_profile(project, getattr(args, "profile", None),
+                                       getattr(args, "mathrsi_repo", None), getattr(args, "mathrsi_plugin", None))
     from .hosts import selected_host
     host = selected_host(current, getattr(args, "host", None))
     pending = current.get("pending_start", {})
@@ -97,13 +108,16 @@ def make_plan(args: argparse.Namespace) -> dict:
                        inherited.get(role, {}).get("write_scope") or inherited.get(role, {}).get("inputs", {}).get("write_scope")
                        or ("." if role == "main" else f".aris/workbench/outputs/{role}"))).resolve()),
                    "active": role in selected} for role, kind in roles.items()],
+        "research_profile": research_profile,
         "will_mutate": False,
     }
 
 
 def parser(prog: str = "superaris") -> argparse.ArgumentParser:
-    p = _ArgumentParser(prog=prog, description="SuperARIS project workbench: native owners, ARIS skills and existing MCP collaboration.",
-                                epilog="交互启动 / Interactive: superaris (or superaris start). 脚本用法 / Scripts: superaris start PROJECT [options].")
+    description = ("MathRSI mathematics workbench: original workflows, domain plugins and persistent research roles."
+                   if prog == "mathrsi" else "SuperARIS project workbench: native owners, ARIS skills and existing MCP collaboration.")
+    p = _ArgumentParser(prog=prog, description=description,
+                        epilog=f"交互启动 / Interactive: {prog} (or {prog} start). 脚本用法 / Scripts: {prog} start PROJECT [options].")
     sub = p.add_subparsers(dest="command", required=True)
     update = sub.add_parser("update", help="update this installation from official SuperARIS main")
     update.add_argument("--check", action="store_true", help="check installed/latest Git revision without installing")
@@ -132,6 +146,9 @@ def parser(prog: str = "superaris") -> argparse.ArgumentParser:
     s.add_argument("--only-role", action="append", choices=None, help="activate only the listed roles; new teams default to main, engineer and writer")
     s.add_argument("--model", action="append", default=[], metavar="ROLE=MODEL")
     s.add_argument("--skill", action="append", default=[])
+    s.add_argument("--profile", choices=("aris", "mathrsi"), help="research mode for a new project; reconnect preserves its recorded mode")
+    s.add_argument("--mathrsi-repo", type=Path, help="MathRSI checkout (or set MATHRSI_REPO)")
+    s.add_argument("--mathrsi-plugin", help="optional MathRSI domain plugin name or directory")
     s.add_argument("--aris-repo", type=Path, help="explicit canonical ARIS checkout; otherwise use the pinned product cache")
     s.add_argument("--recovery", action="append", default=[])
     s.add_argument("--clear-recovery", action="store_true", help="explicitly clear retained recovery inputs")
@@ -238,7 +255,7 @@ def prepare_role_context(project: Path, args: argparse.Namespace) -> dict:
 def main(argv: list[str] | None = None, *, prog: str = "superaris") -> int:
     raw = list(sys.argv[1:] if argv is None else argv)
     command_parser = parser(prog)
-    interactive = prog == "superaris" and raw in ([], ["start"])
+    interactive = prog in {"superaris", "mathrsi"} and raw in ([], ["start"])
     if interactive:
         if not sys.stdin.isatty() or not sys.stdout.isatty():
             print("SuperARIS 向导需要交互终端；未启动任何会话。\n"
@@ -249,7 +266,7 @@ def main(argv: list[str] | None = None, *, prog: str = "superaris") -> int:
         from .wizard import Cancelled, run
         from .ui import tr
         try:
-            selection = run()
+            selection = run(default_profile="mathrsi") if prog == "mathrsi" else run()
             if selection is None:
                 print(tr("已取消启动，未创建工作台。"))
                 return 0
@@ -342,20 +359,28 @@ def main(argv: list[str] | None = None, *, prog: str = "superaris") -> int:
                                 interval=args.interval if args.command == "listen" else 5)
             print(json.dumps(result, ensure_ascii=False, indent=2))
             return 0
+        if prog == "mathrsi" and args.profile is None:
+            from .state import directory, read
+            project = args.project.expanduser().resolve()
+            if not read(directory(project) / "launch.json", {}) and not read(directory(project) / "research-profile.json", {}):
+                args.profile = "mathrsi"
         plan = make_plan(args)
         if not args.plan:
             from .runtime import start
             if interactive:
                 from .wizard import launch
                 from .state import launch_lock
-                from .runtime import binding, save_binding
-                # Save only the confirmed UI choice in the existing record.
+                from .runtime import binding, save_binding, confirm_research_profile
+                # Persist the confirmed profile before host preparation can fail.
                 # The selection phase and cancellation never write preferences.
                 with launch_lock(Path(plan["project"])):
+                    profile = confirm_research_profile(Path(plan["project"]), plan)
                     current = binding(Path(plan["project"])) or {
                         "project": plan["project"], "session": plan["session"],
                         "preset": plan["preset"], "roles": {}, "host": plan["host"],
                     }
+                    if profile is not None:
+                        current["research_profile"] = profile
                     current["ui_language"] = args.ui_language
                     save_binding(Path(plan["project"]), current)
                 try:
@@ -395,3 +420,8 @@ def main(argv: list[str] | None = None, *, prog: str = "superaris") -> int:
         else:
             print(f"error: {message}", file=sys.stderr)
         return 1
+
+
+def mathrsi_main(argv: list[str] | None = None) -> int:
+    """MathRSI entry with the same native startup and recovery contracts."""
+    return main(argv, prog="mathrsi")

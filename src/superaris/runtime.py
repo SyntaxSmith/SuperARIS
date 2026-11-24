@@ -24,6 +24,30 @@ def save_binding(project: Path, value: dict) -> None:
     write(directory(project) / "launch.json", value)
 
 
+def confirm_research_profile(project: Path, plan: dict) -> dict | None:
+    """Freeze the confirmed mode while the caller holds the launch lock.
+
+    Re-read authoritative records here: a plan may predate another launch.
+    Selection and offline plans never call this mutation boundary.
+    """
+    from .mathrsi import resolve_profile
+    proposed = plan.get("research_profile")
+    saved = read(directory(project) / "research-profile.json", None)
+    current = binding(project)
+    if saved is not None:
+        if (proposed or {"profile": "aris"}) != saved:
+            raise ValueError("Research profile changed since this startup was planned; reopen the existing project")
+        return saved
+    if current and (proposed or {}).get("profile") == "mathrsi":
+        raise ValueError("Existing ARIS workbench cannot be converted to MathRSI; choose a new project")
+    if proposed is not None:
+        canonical = resolve_profile(project, proposed.get("profile"), proposed.get("repo"), proposed.get("plugin"))
+        if canonical != proposed:
+            raise ValueError("Research profile changed since this startup was planned; prepare it again")
+        write(directory(project) / "research-profile.json", canonical)
+    return proposed
+
+
 def verify_caller(client: Herdr, pane: str | None, native: str | None) -> None:
     if not pane:
         return  # Explicit user-invoked launcher is not an agent claiming a managed pane.
@@ -77,6 +101,7 @@ def start(plan: dict, args, *, stop_event=None) -> dict:
     project = Path(plan["project"])
     with launch_lock(project):
         old = binding(project)
+        profile = confirm_research_profile(project, plan)
         host = selected_host(old, plan.get("host"))
         seed = old or {"host": host, "session": plan["session"]}
         client = client_for_binding(seed, project, args.herdr_bin,
@@ -92,6 +117,9 @@ def start(plan: dict, args, *, stop_event=None) -> dict:
             client.ensure(directory(project) / "server.log", install=not args.no_install)
             verify_caller(client, args.caller_pane, args.caller_native_session)
         current = old or {"project": str(project), "session": plan["session"], "roles": {}, "preset": plan["preset"]}
+        if profile is not None:
+            current["research_profile"] = profile
+        brand = "MathRSI" if (profile or current.get("research_profile") or {}).get("profile") == "mathrsi" else "SuperARIS"
         language = current.get("ui_language") or "en"
         current["aris_repo"] = str(aris_repo)
         if host == "orca":
@@ -274,6 +302,17 @@ def start(plan: dict, args, *, stop_event=None) -> dict:
                             record["operation_id"] = operation
                     save_binding(project, current)
                     raise
+                record = current["roles"][role]
+                if brand == "MathRSI" and hasattr(client, "rename_terminal"):
+                    from .ui import mathrsi_role_label
+                    title = "MathRSI · " + mathrsi_role_label(role, lang=language) + " · " + {
+                        "codex": "Codex", "claude": "Claude Code", "agy": "Antigravity"}[kind]
+                    try:
+                        record["title_receipt"] = client.rename_terminal(record["pane_id"], title)
+                    except (HerdrError, OSError) as exc:
+                        # Cosmetic and new-only: an unsupported operation must
+                        # not alter the original native launch/readiness result.
+                        record["title_warning"] = str(exc)
                 save_binding(project, current)
                 actions.append({"role": role, "action": "started", "pane_id": record["pane_id"],
                                 "packet": context["packet"], "launch_receipt": response})
@@ -285,14 +324,17 @@ def start(plan: dict, args, *, stop_event=None) -> dict:
                 workbench_title = tr("工作台", lang=ui_language)
             else:
                 role_title, workbench_title = role, "Workbench"
+            if brand == "MathRSI":
+                from .ui import mathrsi_role_label
+                role_title = mathrsi_role_label(role, lang=ui_language or "en")
             if "workspace_id" not in current:
-                display_name = f"SuperARIS · {args.name}" if getattr(args, "name", None) else f"SuperARIS {project.name}"
+                display_name = f"{brand} · {args.name}" if getattr(args, "name", None) else f"{brand} {project.name}"
                 created = client.json("workspace", "create", "--cwd", str(project), "--label", display_name,
                                       "--env", f"ARIS_REPO={aris_repo}", "--no-focus")
                 current["workspace_id"] = created["workspace"]["workspace_id"]
                 tab = created["tab"]["tab_id"]
                 current["tab_id"] = tab
-                client.json("tab", "rename", tab, f"SuperARIS · {workbench_title}")
+                client.json("tab", "rename", tab, f"{brand} · {workbench_title}")
                 pane = created["root_pane"]["pane_id"]
             else:
                 anchor = next(iter(current["roles"].values()), None)
@@ -306,7 +348,7 @@ def start(plan: dict, args, *, stop_event=None) -> dict:
                     created = client.json("pane", "split", split_from, "--direction", direction, "--cwd", str(project), "--no-focus")
                     pane = created["pane"]["pane_id"]
                 else:
-                    created = client.json("tab", "create", "--workspace", current["workspace_id"], "--cwd", str(project), "--label", f"SuperARIS · {role_title}", "--no-focus")
+                    created = client.json("tab", "create", "--workspace", current["workspace_id"], "--cwd", str(project), "--label", f"{brand} · {role_title}", "--no-focus")
                     pane = created["root_pane"]["pane_id"]
             harness_label = {"claude": "Claude Code", "codex": "Codex", "agy": "Antigravity"}[kind]
             client.json("pane", "rename", pane, f"{role_title} · {harness_label}")
