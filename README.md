@@ -44,6 +44,8 @@ For Orca, install and open the [official app](https://www.onorca.dev/) first; if
 
 ## 2. 📢 News
 
+- **2026-11-25** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) Use Rex as a workbench on macOS with `superaris start . --host rex`. The team runs in native Rex terminal blocks and resumes in the same project. [Setup guide](docs/REX.md) · [#12](https://github.com/wanshuiyin/SuperARIS/pull/12)
+
 - **2026-11-16** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 📊 **See your team's handoffs:** inspect waits, reports and next steps in the browser board, auto-refreshing terminal view or an independent Herdr progress tab. Try the new two-tab homepage case and open its full browser view ([#9](https://github.com/wanshuiyin/SuperARIS/pull/9), [guide](docs/BOARD.md), [interactive case](https://wanshuiyin.github.io/SuperARIS/?case=progress&lang=en#workbench)).
 - **2026-11-16** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🧩 Choose AGY Orchestrator Carbon/Argon or Hydrogen XHigh alongside existing model options. Short phase plans, evidence handoffs and bounded member-to-member clarification reuse the original task records and MCP collaboration ([#9](https://github.com/wanshuiyin/SuperARIS/pull/9)).
 - **2026-11-14** — ![FIX](https://img.shields.io/badge/FIX-2ea44f?style=flat-square) 🛟 Herdr now notifies you when receiving is paused because the original main cannot be verified; startup failures show the error and diagnostic log path ([#8](https://github.com/wanshuiyin/SuperARIS/pull/8)).

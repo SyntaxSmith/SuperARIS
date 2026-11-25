@@ -46,6 +46,8 @@ superaris
 
 ## 2. 📢 近期更新
 
+- **2026-11-25** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) macOS 用户可用 `superaris start . --host rex` 在 Rex 原生终端窗格中启动团队，回到同一项目即可接续。[使用指南](docs/REX.md) · [#12](https://github.com/wanshuiyin/SuperARIS/pull/12)
+
 - **2026-11-16** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 📊 **看清团队协作与交付**：浏览器看板、自动刷新的终端总览与 Herdr 独立协作进度标签页，展示谁在等谁、最近交付和下一步；首页新增双标签交互示例，可打开完整浏览器视图（[#9](https://github.com/wanshuiyin/SuperARIS/pull/9)、[指南](docs/BOARD.md)、[交互示例](https://wanshuiyin.github.io/SuperARIS/?case=progress&lang=zh#workbench)）。
 - **2026-11-16** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🧩 AGY 新增 Orchestrator Carbon／Argon 与 Hydrogen XHigh 可选项；用短阶段计划、证据回交和成员间有界提问澄清衔接研究工作，沿用原任务记录与 MCP 协作（[#9](https://github.com/wanshuiyin/SuperARIS/pull/9)）。
 - **2026-11-14** — ![FIX](https://img.shields.io/badge/FIX-2ea44f?style=flat-square) 🛟 Herdr 中原主控无法核实时，通知收件已暂停；启动失败显示具体错误与日志路径（[#8](https://github.com/wanshuiyin/SuperARIS/pull/8)）。

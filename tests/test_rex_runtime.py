@@ -239,13 +239,19 @@ def test_receiver_subscribes_roles_added_after_it_started(rex_project, monkeypat
     start("--only-role", "main", "--only-role", "engineer")
     roles = runtime.binding(project)["roles"]
     seen = []
+    subscribed = threading.Event()
+
+    def observe(subscriptions, timeout):
+        seen.append(subscriptions)
+        subscribed.set()
+        return iter(())
 
     def client_from_start_time(current, folder, binary, **kwargs):
         client = hosts.client_for_binding(early, folder, binary, **kwargs)
-        client.events = lambda subscriptions, timeout: (seen.append(subscriptions), time.sleep(timeout), iter(()))[2]
+        client.events = observe
         return client
     monkeypatch.setattr(bridge, "client_for_binding", client_from_start_time)
-    bridge.listen(project, duration=0.3, interval=0.2)
+    bridge.listen(project, duration=10, interval=0.2, stop_event=subscribed)
     assert {item["pane_id"] for item in seen[0]} == {roles["main"]["pane_id"], roles["engineer"]["pane_id"]}
 
 
