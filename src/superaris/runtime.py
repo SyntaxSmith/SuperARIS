@@ -14,7 +14,9 @@ from .context import prepare_context
 from .delivery import deliver
 from .state import directory, launch_lock, read, write
 from .dependencies import resolve_aris_repo
-from .hosts import client_for_binding, identity_present, selected_host
+from .hosts import client_for_binding, identity_present, new_role_placement, selected_host
+from .mathrsi import confirm_profile
+from .ui import mathrsi_role_label, tr
 
 
 def binding(project: Path) -> dict:
@@ -23,6 +25,10 @@ def binding(project: Path) -> dict:
 
 def save_binding(project: Path, value: dict) -> None:
     write(directory(project) / "launch.json", value)
+
+
+def confirm_research_profile(project: Path, plan: dict) -> dict | None:
+    return confirm_profile(project, plan.get("research_profile"), bound=bool(binding(project)))
 
 
 def verify_caller(client: Herdr, pane: str | None, native: str | None) -> None:
@@ -78,6 +84,7 @@ def start(plan: dict, args, *, stop_event=None) -> dict:
     project = Path(plan["project"])
     with launch_lock(project):
         old = binding(project)
+        profile = confirm_research_profile(project, plan)
         host = selected_host(old, plan.get("host"))
         seed = old or {"host": host, "session": plan["session"]}
         client = client_for_binding(seed, project, args.herdr_bin, orca_bin=getattr(args, "orca_bin", None),
@@ -98,6 +105,9 @@ def start(plan: dict, args, *, stop_event=None) -> dict:
             client.ensure(directory(project) / "server.log", install=not args.no_install)
             verify_caller(client, args.caller_pane, args.caller_native_session)
         current = old or {"project": str(project), "session": plan["session"], "roles": {}, "preset": plan["preset"]}
+        if profile is not None:
+            current["research_profile"] = profile
+        brand = "MathRSI" if (profile or current.get("research_profile") or {}).get("profile") == "mathrsi" else "SuperARIS"
         language = current.get("ui_language") or "en"
         current["aris_repo"] = str(aris_repo)
         if host == "orca":
@@ -243,6 +253,7 @@ def start(plan: dict, args, *, stop_event=None) -> dict:
             context = prepare_context(project, role, kind, selected["task"], selected["skills"],
                                       selected["recovery"], aris_repo, [selected["write_scope"]], **({"workbench_host": host} if host != "herdr" else {}))
             _exclude_writers(context, role, collaborator_scopes)
+            harness_label = {"codex": "Codex", "claude": "Claude Code", "agy": "Antigravity"}[kind]
             if host == "orca":
                 record = {"host": "orca", "harness": kind, "created": True,
                           "automation_owned": args.automation_owned, "context": context,
@@ -288,33 +299,27 @@ def start(plan: dict, args, *, stop_event=None) -> dict:
                             record["operation_id"] = operation
                     save_binding(project, current)
                     raise
+                record = current["roles"][role]
+                if brand == "MathRSI" and hasattr(client, "rename_terminal"):
+                    title = f"{brand} · {mathrsi_role_label(role, lang=language)} · {harness_label}"
+                    try:
+                        record["title_receipt"] = client.rename_terminal(record["pane_id"], title)
+                    except (HerdrError, OSError) as exc:
+                        # A cosmetic failure leaves the native launch result intact.
+                        record["title_warning"] = str(exc)
                 save_binding(project, current)
                 actions.append({"role": role, "action": "started", "pane_id": record["pane_id"],
                                 "packet": context["packet"], "launch_receipt": response})
                 continue
             ui_language = current.get("ui_language")
+            role_title, workbench_title = role, "Workbench"
             if ui_language in {"zh", "en"}:
-                from .ui import tr
                 role_title = tr({"main": "主会话", "engineer": "工程", "writer": "研究与写作"}.get(role, role), lang=ui_language)
                 workbench_title = tr("工作台", lang=ui_language)
-            else:
-                role_title, workbench_title = role, "Workbench"
-            container = "rex_session" if host == "rex" else "workspace_id"
-            display_name = f"SuperARIS · {args.name}" if getattr(args, "name", None) else f"SuperARIS {project.name}"
-            harness_label = {"claude": "Claude Code", "codex": "Codex", "agy": "Antigravity"}[kind]
-            if container not in current:
-                placement = None
-            else:
-                anchor = next(iter(current["roles"].values()), None)
-                if anchor and anchor.get("created"):
-                    # A new team gets a left owner and a right collaborator
-                    # column. Keep an adopted user's original topology intact.
-                    engineer = current["roles"].get("engineer")
-                    below_engineer = role == "writer" and engineer and engineer.get("created")
-                    placement = (engineer["pane_id"] if below_engineer else anchor["pane_id"],
-                                 "down" if below_engineer else "right")
-                else:
-                    placement = "tab"
+            if brand == "MathRSI":
+                role_title = mathrsi_role_label(role, lang=language)
+            display_name = f"{brand} · {args.name}" if getattr(args, "name", None) else f"{brand} {project.name}"
+            placement = new_role_placement(current, role, host)
             if host == "rex":
                 pane, name = None, f"{role_title} · {harness_label}"
             else:
@@ -324,10 +329,10 @@ def start(plan: dict, args, *, stop_event=None) -> dict:
                     current["workspace_id"] = created["workspace"]["workspace_id"]
                     tab = created["tab"]["tab_id"]
                     current["tab_id"] = tab
-                    client.json("tab", "rename", tab, f"SuperARIS · {workbench_title}")
+                    client.json("tab", "rename", tab, f"{brand} · {workbench_title}")
                     pane = created["root_pane"]["pane_id"]
                 elif placement == "tab":
-                    created = client.json("tab", "create", "--workspace", current["workspace_id"], "--cwd", str(project), "--label", f"SuperARIS · {role_title}", "--no-focus")
+                    created = client.json("tab", "create", "--workspace", current["workspace_id"], "--cwd", str(project), "--label", f"{brand} · {role_title}", "--no-focus")
                     pane = created["root_pane"]["pane_id"]
                 else:
                     split_from, direction = placement
@@ -352,7 +357,7 @@ def start(plan: dict, args, *, stop_event=None) -> dict:
                 if host == "rex":
                     # Rex resolves relative commands in the project; pin the CLI checked above.
                     record.update(client.launch_agent(current, placement, [os.path.abspath(shutil.which(kind)), *native], name,
-                                                      session_label=display_name, window_label=f"SuperARIS · {workbench_title}"),
+                                                      session_label=display_name, window_label=f"{brand} · {workbench_title}"),
                                   launch_phase="launched")
                     pane = record["pane_id"]
                     save_binding(project, current)

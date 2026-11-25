@@ -38,6 +38,8 @@ superaris
 | **Orca（可选）** | `superaris start . --host orca` | [Orca 安装与使用](docs/ORCA.md) |
 | **Rex（可选）** | `superaris start . --host rex` | [Rex 安装与使用](docs/REX.md) |
 
+研究数学问题时，输入 `mathrsi` 即可在同一工作台使用 MathRSI 的数学工作流，并按需选择领域插件。[MathRSI 工作台指南 →](docs/MATHRSI.md)
+
 使用 Orca 前，先安装并打开[官方应用](https://www.onorca.dev/)；若 CLI 不可用，在 **Settings → General → Orca CLI** 注册命令。已有项目重入时保留原工作台与团队。[更多安装方式 ↓](#安装与启动)
 
 <a id="近期更新"></a>

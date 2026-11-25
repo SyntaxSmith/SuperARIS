@@ -36,6 +36,8 @@ For an explicit start, open a new project's directory and choose one workbench:
 | **Orca (optional)** | `superaris start . --host orca` | [Orca setup](docs/ORCA.md) |
 | **Rex (optional)** | `superaris start . --host rex` | [Rex setup](docs/REX.md) |
 
+For mathematical research, run `mathrsi` to open the same workbench with MathRSI’s workflows and optional domain plugins. [MathRSI Workbench guide →](docs/MATHRSI.md)
+
 For Orca, install and open the [official app](https://www.onorca.dev/) first; if its CLI is unavailable, register it in **Settings → General → Orca CLI**. Reopening an existing project keeps its recorded workbench and team. [More installation options ↓](#install-and-open)
 
 <a id="news"></a>

@@ -58,6 +58,8 @@ def select_project_en(term, project):
 
 
 def summary_en(term):
+    term.expect("Research mode")
+    term.line("1")
     term.expect("Client combination")
     term.line("3")
     for _ in range(3):

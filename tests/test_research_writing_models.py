@@ -34,9 +34,9 @@ def test_native_default_manual_and_codex_choice_remain(monkeypatch):
 
 
 def test_back_keeps_all_three_model_choices_and_original_role_ids(monkeypatch, tmp_path):
-    answers = ["2", str(tmp_path / "not-created"), "4", "3", "3", "3",
+    answers = ["2", str(tmp_path / "not-created"), "1", "4", "3", "3", "3",
                "4", "5", "3", "", "", "2",  # back from summary
-               "", "", "", "", "", "", "", "", "", "", "1"]
+               "", "1", "", "", "", "", "", "", "", "", "", "1"]
     selection, prompts = select(monkeypatch, tmp_path, answers, caps(clients=("agy",)))
     args = cli.parser().parse_args(selection.arguments)
     assert cli.assignments(args.model) == {"main": "gemini-4-carbon-high",
@@ -85,6 +85,9 @@ def test_real_pty_agy_choices_preview_and_cancel(environment, language):
     try:
         term.expect("项目目录" if language == "zh" else "Project directory")
         term.line(str(project))
+        if language == "en":
+            term.expect("Research mode")
+            term.line("1")
         term.expect("客户端组合" if language == "zh" else "Client combination")
         term.line("4")
         for _ in range(3):

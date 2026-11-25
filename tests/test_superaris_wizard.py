@@ -49,6 +49,9 @@ class Terminal:
         self.text += self.decoder.decode(chunk)
 
     def expect(self, text, timeout=10):
+        if "客户端组合" in text:
+            self.expect("研究模式", timeout)
+            self.line("1")  # Existing startup regressions use ARIS mode.
         deadline = time.monotonic() + timeout
         while text not in self.text[self.position:]:
             assert time.monotonic() < deadline, f"Missing {text!r} in terminal:\n{self.text}"

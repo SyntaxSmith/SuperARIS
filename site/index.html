@@ -1973,6 +1973,7 @@
       <a href="media/orca-multi-demo-zh.mp4" data-video-language="zh" download="SuperARIS-orca-multi-demo-zh.mp4" data-host-i18n="download">Download</a>
       <a id="orca-other-video" href="media/orca-demo-en.mp4" data-host-i18n="other">Single-model video</a>
     </nav>
+    <p class="demo-note"><a id="mathrsi-application" href="https://lisresearchgroup.github.io/math-rsi/workbench/index.html?lang=en#wb-demo" data-i18n="mathrsi_application">MathRSI workbench: how the team ruled out distance 17 for a 43-bit code ↗</a></p>
     <!-- Below the Fold: 3 Researcher-Focused Cards -->
     <section class="below-fold" id="capabilities">
       <div class="info-card">
@@ -2056,6 +2057,7 @@
           mechanism_guide: "Receiving & project memory guide ↗",
           mechanism_caption: "Reports return to the original main; project files carry decisions, evidence and next steps into the next session.",
           mechanism_zoom: "Open full-size diagram ↗",
+          mathrsi_application: "MathRSI workbench: how the team ruled out distance 17 for a 43-bit code ↗",
           mechanism_alt: "SuperARIS mechanisms: team and MCP reports return to the original main for evidence-based follow-through; editable project notes, research wiki and task records restore context.",
           history_label: "Earlier in this session"
         },
@@ -2081,6 +2083,7 @@
           mechanism_guide: "收件与项目记忆指南 ↗",
           mechanism_caption: "交付回到原主 Agent；项目文件保存决定、证据与下一步，让后续会话接着推进。",
           mechanism_zoom: "查看原图，可放大 ↗",
+          mathrsi_application: "MathRSI 数学工作台：43 位码为什么达不到距离 17？↗",
           mechanism_alt: "SuperARIS 双面板机制图：常驻团队与 MCP 交付经接收器回到原主 Agent 验收接续；可编辑的项目笔记、research wiki 和任务记录在恢复时读回。",
           history_label: "本轮会话前序记录"
         }
@@ -2992,6 +2995,8 @@
           const key = el.getAttribute("data-i18n");
           if (dict[key]) el.textContent = dict[key];
         });
+
+        document.getElementById("mathrsi-application").href = "https://lisresearchgroup.github.io/math-rsi/workbench/index.html?lang=" + lang + "#wb-demo";
 
         const mechanismImage = document.getElementById("mechanism-diagram");
         mechanismImage.src = "media/superaris-mechanisms-" + lang + ".png";

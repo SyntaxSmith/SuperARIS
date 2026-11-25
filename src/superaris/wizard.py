@@ -210,12 +210,13 @@ def _preview_pad(text: str, width: int) -> str:
     return text + " " * max(0, width - cells)
 
 
-def layout(roles: list[tuple[str, str]]) -> None:
+def layout(roles: list[tuple[str, str]], profile: str = "aris") -> None:
     print(tr("\n分工与布局预览："))
     clients = {role: {"claude": "CC", "codex": "Codex", "agy": "AGY"}[kind] for role, kind in roles}
-    main = tr("主会话") + " / " + clients.get("main", "")
-    engineer = tr("工程") + " / " + clients.get("engineer", "")
-    writer = tr("研究与写作") + " / " + clients.get("writer", "")
+    label = ui.mathrsi_role_label if profile == "mathrsi" else lambda role: tr({"main": "主会话", "engineer": "工程", "writer": "研究与写作"}.get(role, role))
+    main = label("main") + " / " + clients.get("main", "")
+    engineer = label("engineer") + " / " + clients.get("engineer", "")
+    writer = label("writer") + " / " + clients.get("writer", "")
     if len(roles) == 3:
         print("┌────────────────────┬────────────────────────────┐")
         print(f"│ {_preview_pad(main, 19)}│ {_preview_pad(engineer, 27)}│")
@@ -237,7 +238,7 @@ def session_name(project: Path) -> str:
     return f"superaris-{slug[:32]}"
 
 
-def run() -> Selection | None:
+def run(*, default_profile: str = "aris") -> Selection | None:
     """No Herdr requests, model probes or filesystem writes during selection."""
     from .runtime import binding
     from .hosts import selected_host
@@ -338,6 +339,29 @@ def run() -> Selection | None:
             if host != "herdr" and not available.get(host):
                 dependency_summary(available, host)
                 return None
+            # Only new workbenches select a mode. Recovery above preserves the
+            # original arguments, owner identity and native pending state.
+            from .mathrsi import resolve_profile
+            from .state import directory, read
+            saved_profile = read(directory(project) / "research-profile.json", {})
+            profile = saved_profile.get("profile")
+            if profile is None:
+                mode = choose(tr("研究模式"), [tr("ARIS：通用科研"), tr("MathRSI：数学研究")],
+                              2 if default_profile == "mathrsi" else 1)
+                profile = "mathrsi" if mode == 2 else "aris"
+            profile_arguments = ["--profile", profile]
+            if profile == "mathrsi":
+                import os
+                repo = saved_profile.get("repo") or os.environ.get("MATHRSI_REPO", "")
+                repo = ask(tr("MathRSI 仓库目录（或设置 MATHRSI_REPO）"), repo)
+                plugin = ask(tr("数学领域插件（可留空，填写 plugins 下目录名）"), saved_profile.get("plugin", ""))
+                configured = resolve_profile(project, profile, repo or None, plugin or None)
+                profile_arguments += ["--mathrsi-repo", configured["repo"]]
+                if configured.get("plugin"):
+                    profile_arguments += ["--mathrsi-plugin", configured["plugin"]]
+            else:
+                resolve_profile(project, profile)
+
             print(tr("\n[2/4] 客户端组合与模型"))
             show_capabilities(available)
             options = []
@@ -369,7 +393,7 @@ def run() -> Selection | None:
                 models[(role, kind)] = value
                 chosen[role] = value
             print(tr("\n[3/4] 分工与工作台"))
-            layout(roles)
+            layout(roles, profile)
             name = ask(tr("工作台名称"), name)
             if task:
                 print(tr("当前填写的任务：{task}", task=task))
@@ -382,11 +406,14 @@ def run() -> Selection | None:
                 task = ask(tr("本次任务（留空则进入后再给任务）"))
             print(tr("\n[4/4] 启动摘要"))
             print(tr("项目：{project}{created}", project=project, created=tr("（启动时创建）") if not project.exists() else ""))
-            print(tr("工作台：SuperARIS · {name}", name=name))
+            brand = "MathRSI" if profile == "mathrsi" else "SuperARIS"
+            print(tr("工作台：{brand} · {name}", brand=brand, name=name))
+            print(tr("研究模式：{profile}", profile=brand))
             print(tr("宿主：{host}", host=HOST_LABELS[host]))
             for role, kind in roles:
                 scope = tr("项目统筹与验收（协作者目录除外）") if role == "main" else tr("{scope}（独占）", scope=f"outputs/{role}")
-                print(f"  {ui.role_label(role)} / {tr(LABELS[kind])} / {chosen[role] or tr('沿用 CLI 配置')} → {scope}")
+                label = ui.mathrsi_role_label(role) if profile == "mathrsi" else ui.role_label(role)
+                print(f"  {label} / {tr(LABELS[kind])} / {chosen[role] or tr('沿用 CLI 配置')} → {scope}")
             print(tr("任务：{task}", task=task or tr("暂不安排，进入后再告诉主会话")))
             print(tr("将打开所选工作台，加载项目与 ARIS 技能，并接收协作者后续结果。"))
             if any(kind == "claude" for _, kind in roles):
@@ -401,7 +428,7 @@ def run() -> Selection | None:
                 continue
             if action == 3 or not ready:
                 return None
-            arguments = ["start", str(project), "--session", session_name(project), "--name", name]
+            arguments = ["start", str(project), "--session", session_name(project), "--name", name, *profile_arguments]
             if preset:
                 arguments += ["--preset", preset]
             else:

@@ -38,6 +38,8 @@ def select(monkeypatch, tmp_path, answers, caps, bound=None):
 
     def reply(prompt):
         prompts.append(prompt)
+        if "Research mode" in prompt or "研究模式" in prompt:
+            return "1"  # Existing host tests keep their ARIS research mode.
         return next(iterator)
 
     monkeypatch.setattr("builtins.input", reply)

@@ -81,6 +81,20 @@ def client_for_binding(bound: dict, project: Path, binary: str = "herdr", *, orc
     return herdr_factory(bound["session"], binary)
 
 
+def new_role_placement(bound: dict, role: str, host: str) -> tuple[str, str] | str | None:
+    """Choose the next terminal placement for a Herdr or Rex team."""
+    container = "rex_session" if host == "rex" else "workspace_id"
+    if container not in bound:
+        return None
+    anchor = next(iter(bound["roles"].values()), None)
+    if not anchor or not anchor.get("created"):
+        return "tab"  # Keep an adopted user's original layout intact.
+    engineer = bound["roles"].get("engineer")
+    if role == "writer" and engineer and engineer.get("created"):
+        return engineer["pane_id"], "down"
+    return anchor["pane_id"], "right"
+
+
 def identity_present(role: dict) -> bool:
     if role.get("host") == "orca":
         return bool(role.get("pane_id") and role.get("runtime_id") and role.get("process_incarnation"))
