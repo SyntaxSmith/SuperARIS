@@ -2,7 +2,7 @@
 import os
 from pathlib import Path
 
-from .state import directory, read
+from .state import directory, read, write
 
 
 def resolve_profile(project: Path, profile=None, repo=None, plugin=None) -> dict | None:
@@ -38,6 +38,24 @@ def resolve_profile(project: Path, profile=None, repo=None, plugin=None) -> dict
         if plugin is not None and saved.get('plugin', '') != resolved['plugin']:
             raise ValueError('Existing MathRSI plugin cannot be changed by preparation')
     return resolved
+
+
+def confirm_profile(project: Path, proposed: dict | None, *, bound: bool) -> dict | None:
+    """Freeze the confirmed mode while the caller holds the launch lock."""
+    path = directory(project) / 'research-profile.json'
+    saved = read(path, None)
+    if saved is not None:
+        if (proposed or {'profile': 'aris'}) != saved:
+            raise ValueError('Research profile changed since this startup was planned; reopen the existing project')
+        return saved
+    if bound and (proposed or {}).get('profile') == 'mathrsi':
+        raise ValueError('Existing ARIS workbench cannot be converted to MathRSI; choose a new project')
+    if proposed is not None:
+        canonical = resolve_profile(project, proposed.get('profile'), proposed.get('repo'), proposed.get('plugin'))
+        if canonical != proposed:
+            raise ValueError('Research profile changed since this startup was planned; prepare it again')
+        write(path, canonical)
+    return proposed
 
 
 def resource_index(profile: dict, harness: str) -> dict[str, str]:

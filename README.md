@@ -23,7 +23,7 @@ pipx install "git+https://github.com/wanshuiyin/SuperARIS.git"
 superaris
 ```
 
-Choose your language, project, workbench, team and models. Existing Herdr or Orca installations are reused.
+Choose your language, project, workbench, team and models. Existing Herdr, Orca or Rex installations are reused.
 
 Already installed? Run `superaris update --check`, then `superaris update`.
 [Older-version bootstrap and receiver refresh →](docs/DEPENDENCIES.md#updates)
@@ -34,6 +34,7 @@ For an explicit start, open a new project's directory and choose one workbench:
 |---|---|---|
 | **Herdr (default)** | `superaris start . --host herdr` | [Workbench and startup](docs/WORKBENCH.md) · [Windows](docs/WINDOWS.md) |
 | **Orca (optional)** | `superaris start . --host orca` | [Orca setup](docs/ORCA.md) |
+| **Rex (optional)** | `superaris start . --host rex` | [Rex setup](docs/REX.md) |
 
 For mathematical research, run `mathrsi` to open the same workbench with MathRSI’s workflows and optional domain plugins. [MathRSI Workbench guide →](docs/MATHRSI.md)
 
@@ -42,6 +43,8 @@ For Orca, install and open the [official app](https://www.onorca.dev/) first; if
 <a id="news"></a>
 
 ## 2. 📢 News
+
+- **2026-11-25** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) Use Rex as a workbench on macOS with `superaris start . --host rex`. The team runs in native Rex terminal blocks and resumes in the same project. [Setup guide](docs/REX.md) · [#12](https://github.com/wanshuiyin/SuperARIS/pull/12)
 
 - **2026-11-16** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 📊 **See your team's handoffs:** inspect waits, reports and next steps in the browser board, auto-refreshing terminal view or an independent Herdr progress tab. Try the new two-tab homepage case and open its full browser view ([#9](https://github.com/wanshuiyin/SuperARIS/pull/9), [guide](docs/BOARD.md), [interactive case](https://wanshuiyin.github.io/SuperARIS/?case=progress&lang=en#workbench)).
 - **2026-11-16** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🧩 Choose AGY Orchestrator Carbon/Argon or Hydrogen XHigh alongside existing model options. Short phase plans, evidence handoffs and bounded member-to-member clarification reuse the original task records and MCP collaboration ([#9](https://github.com/wanshuiyin/SuperARIS/pull/9)).
@@ -94,7 +97,7 @@ These use your configured tools and keep ARIS's review and acceptance criteria. 
 
 SuperARIS tracks registered tasks, result files, and reports while the original main session is running—even after you close the workbench window. Your main agent uses those updates to collect finished work, check the evidence, and continue the next authorized step.
 
-Human-controlled sessions receive notices. Explicitly automation-owned Codex sessions and Herdr AGY sessions can continue automatically when idle with a verified empty input; CC and Orca AGY use notices. [Receiving results and continuing work →](docs/RESULTS_AND_MEMORY.md)
+Human-controlled sessions receive notices. Explicitly automation-owned Codex sessions and Herdr or Rex AGY sessions can continue automatically when idle with a verified empty input; CC and Orca AGY use notices. [Receiving results and continuing work →](docs/RESULTS_AND_MEMORY.md)
 
 [![SuperARIS proactive collaboration: team and MCP reports reach the receiver, the original main agent verifies results and continues authorized work, and project records support recovery (Chinese labels).](assets/proactive-mechanism-zh.png)](assets/proactive-mechanism-zh.png)
 
@@ -116,7 +119,7 @@ Reopen a running team to continue its conversations, or give a new session the p
 
 ## 8. 📦 Install and open
 
-Requires Python 3.10+ on macOS, Linux or Windows, [Herdr](https://herdr.dev) (default) or [optional Orca Terminal v1](docs/ORCA.md), and your chosen native CLIs (`codex`, `claude`, `agy`) with model access configured.
+Requires Python 3.10+ on macOS, Linux or Windows, [Herdr](https://herdr.dev) (default), [optional Orca Terminal v1](docs/ORCA.md) or [optional Rex](docs/REX.md), and your chosen native CLIs (`codex`, `claude`, `agy`) with model access configured.
 
 ```bash
 pipx install 'git+https://github.com/wanshuiyin/SuperARIS.git'
@@ -137,7 +140,7 @@ The presets are shortcuts, not role restrictions. For example, choose AGY main, 
 superaris start /path/to/project --role main=agy --role engineer=claude --role writer=agy
 ```
 
-Add `--host orca` for a new Orca project, or `--model ROLE=MODEL` for individual model requests. The two AGY roles have separate sessions. CC and Orca AGY follow-up remains notice-based. On Herdr, explicitly automation-owned AGY can continue through its verified empty idle composer, alongside existing guarded Codex automation.
+Add `--host orca` or `--host rex` for a new Orca or Rex project, or `--model ROLE=MODEL` for individual model requests. The two AGY roles have separate sessions. CC and Orca AGY follow-up remains notice-based. On Herdr and Rex, explicitly automation-owned AGY can continue through its verified empty idle composer, alongside existing guarded Codex automation.
 
 New workbenches use the same three-pane layout. Existing teams and pending startup choices stay intact; `--only-role` selects an explicit subset.
 

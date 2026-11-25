@@ -51,10 +51,15 @@ def test_changed_original_occupant_is_rejected(observed, change):
     with pytest.raises(OrcaError): client.verify_owner(role, project)
 
 
-def test_human_draft_revokes_without_send_and_retains_native_notice(observed, monkeypatch):
+@pytest.mark.parametrize('screen', [
+    {'tail': ['› HUMAN DRAFT']},
+    {'tail': ['›', '  Still editing', ' ']},
+    {'tail': ['› Ask Codex to do anything'], 'draft': 'Still editing\n› Ask Codex to do anything'},
+])
+def test_human_draft_revokes_without_send_and_retains_native_notice(observed, monkeypatch, screen):
     project, client, role, _, _ = observed
     calls = []
-    monkeypatch.setattr(client, 'read_screen', lambda handle: {'source': 'screen', 'tail': ['› HUMAN DRAFT']})
+    monkeypatch.setattr(client, 'read_screen', lambda handle: {'source': 'screen', **screen})
     monkeypatch.setattr(client, 'send_prompt', lambda *a: calls.append(a))
     monkeypatch.setattr(client, 'notice', lambda title, text: {'notice_file': 'original-notice'})
     result = delivery.deliver(client, project, role, 'scoped work')
@@ -62,11 +67,19 @@ def test_human_draft_revokes_without_send_and_retains_native_notice(observed, mo
     assert result['notice']['notice_file'] == 'original-notice' and calls == []
 
 
-def test_empty_screen_sends_once_and_preserves_real_receipt(observed, monkeypatch):
+@pytest.mark.parametrize('footer', [
+    [],
+    [' ', '  ? for shortcuts'],
+    [' ', '  GPT-6.2-Astra max · Context 0% used ·', '  weekly 39% left',
+     '  ← for agents · ? for shortcuts                       ⚠ 1 warning · f2 to view'],
+    [' ', '  GPT-6.2-Astra max · ~/SuperARIS ·', '  Context 0% used · weekly 39% left',
+     '  ← for agents               ⚠ 2 · f2'],
+])
+def test_empty_screen_sends_once_and_preserves_real_receipt(observed, monkeypatch, footer):
     project, client, role, _, _ = observed
     calls = []
     native = {'accepted': True, 'prompt': {'requestId': 'issued-by-orca', 'stages': ['turn_started']}}
-    monkeypatch.setattr(client, 'read_screen', lambda handle: {'source': 'screen', 'tail': ['› Ask Codex to do anything']})
+    monkeypatch.setattr(client, 'read_screen', lambda handle: {'source': 'screen', 'tail': ['› Ask Codex to do anything', *footer]})
     monkeypatch.setattr(client, 'send_prompt', lambda *a: calls.append(a) or native)
     result = delivery.deliver(client, project, role, 'scoped work')
     assert result['delivery'] == 'submitted' and result['acceptance'] == 'not_evaluated'

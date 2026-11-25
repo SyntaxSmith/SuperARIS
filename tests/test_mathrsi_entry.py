@@ -105,7 +105,9 @@ def test_existing_aris_cannot_be_converted_by_explicit_profile(tmp_path):
     assert not (directory(project) / 'research-profile.json').exists()
 
 
+from tests.test_mathrsi_context import release as mathrsi_release
 from tests.test_orca_runtime import setup as orca_setup
+from tests.test_rex_runtime import rex_project
 
 
 def test_confirmed_mathrsi_start_saves_marker_before_context_and_reuses_native_team(orca_setup, monkeypatch):
@@ -148,6 +150,26 @@ def test_optional_orca_title_error_does_not_change_native_success(orca_setup):
     result = runtime.start(cli.make_plan(args), args)
     assert [action['action'] for action in result['actions']] == ['started'] * 3
     assert all(role['title_warning'] == 'title unsupported' for role in runtime.binding(project)['roles'].values())
+
+
+def test_rex_mathrsi_start_and_reconnect_preserve_profile_and_native_owner(rex_project, mathrsi_release):
+    project, client, start = rex_project
+    result, _ = start('--profile', 'mathrsi', '--mathrsi-repo', str(mathrsi_release), '--only-role', 'main')
+    assert result['host'] == 'rex'
+    original = result['roles']['main']
+    profile = runtime.binding(project)['research_profile']
+    assert profile == {'profile': 'mathrsi', 'repo': str(mathrsi_release), 'plugin': ''}
+    assert json.loads((directory(project) / 'research-profile.json').read_text()) == profile
+    packet = Path(original['context']['packet']).read_text()
+    assert 'Workbench host: rex' in packet and 'Required MathRSI profile guidance' in packet
+    create, = client.calls('session.create')
+    assert create['label'] == f'MathRSI {project.name}'
+    assert client.read()['blocks'][original['pane_id']]['label'] == 'Research lead · Codex'
+
+    reconnected, _ = start('--only-role', 'main')
+    assert [action['action'] for action in reconnected['actions']] == ['reused']
+    assert reconnected['roles']['main']['pane_id'] == original['pane_id']
+    assert len(client.calls('session.create')) == len(client.calls('block.event')) == 1
 
 
 def test_interactive_confirmation_persists_profile_before_failed_launch(tmp_path, monkeypatch):

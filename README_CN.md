@@ -25,7 +25,7 @@ pipx install "git+https://github.com/wanshuiyin/SuperARIS.git"
 superaris
 ```
 
-依次选择语言、项目、工作台、团队和模型；已安装的 Herdr 或 Orca 会直接复用。
+依次选择语言、项目、工作台、团队和模型；已安装的 Herdr、Orca 或 Rex 会直接复用。
 
 已安装后，用 `superaris update --check` 检查、`superaris update` 更新。
 [旧版首次引导与原项目 receiver 刷新 →](docs/DEPENDENCIES.md#updates)
@@ -36,6 +36,7 @@ superaris
 |---|---|---|
 | **Herdr（默认）** | `superaris start . --host herdr` | [工作台与启动](docs/WORKBENCH.md) · [Windows](docs/WINDOWS.md) |
 | **Orca（可选）** | `superaris start . --host orca` | [Orca 安装与使用](docs/ORCA.md) |
+| **Rex（可选）** | `superaris start . --host rex` | [Rex 安装与使用](docs/REX.md) |
 
 研究数学问题时，输入 `mathrsi` 即可在同一工作台使用 MathRSI 的数学工作流，并按需选择领域插件。[MathRSI 工作台指南 →](docs/MATHRSI.md)
 
@@ -44,6 +45,8 @@ superaris
 <a id="近期更新"></a>
 
 ## 2. 📢 近期更新
+
+- **2026-11-25** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) macOS 用户可用 `superaris start . --host rex` 在 Rex 原生终端窗格中启动团队，回到同一项目即可接续。[使用指南](docs/REX.md) · [#12](https://github.com/wanshuiyin/SuperARIS/pull/12)
 
 - **2026-11-16** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 📊 **看清团队协作与交付**：浏览器看板、自动刷新的终端总览与 Herdr 独立协作进度标签页，展示谁在等谁、最近交付和下一步；首页新增双标签交互示例，可打开完整浏览器视图（[#9](https://github.com/wanshuiyin/SuperARIS/pull/9)、[指南](docs/BOARD.md)、[交互示例](https://wanshuiyin.github.io/SuperARIS/?case=progress&lang=zh#workbench)）。
 - **2026-11-16** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🧩 AGY 新增 Orchestrator Carbon／Argon 与 Hydrogen XHigh 可选项；用短阶段计划、证据回交和成员间有界提问澄清衔接研究工作，沿用原任务记录与 MCP 协作（[#9](https://github.com/wanshuiyin/SuperARIS/pull/9)）。
@@ -96,7 +99,7 @@ SuperARIS 基于 [ARIS](https://github.com/wanshuiyin/Auto-claude-code-research-
 
 项目运行期间，SuperARIS 跟踪已登记的任务、结果文件和交付报告。原主会话仍在运行时，关闭工作台窗口也不打断跟进。主 Agent 根据这些更新收回完成的工作、核对证据，再推进下一项已授权步骤。
 
-人工掌控的会话通过通知收件；显式交给自动化的 Codex 和 Herdr AGY 会话，在空闲且已验证输入框为空时可自动接续。CC 与 Orca AGY 仍通过通知收件。[收件与工作接续 →](docs/RESULTS_AND_MEMORY.md)
+人工掌控的会话通过通知收件；显式交给自动化的 Codex 和 Herdr / Rex AGY 会话，在空闲且已验证输入框为空时可自动接续。CC 与 Orca AGY 仍通过通知收件。[收件与工作接续 →](docs/RESULTS_AND_MEMORY.md)
 
 [![SuperARIS 主动协作机制：常驻团队与 MCP 交付，经 receiver 通知原主 Agent 验收与推进，并记录项目进度以供恢复。](assets/proactive-mechanism-zh.png)](assets/proactive-mechanism-zh.png)
 
@@ -118,7 +121,7 @@ SuperARIS 基于 [ARIS](https://github.com/wanshuiyin/Auto-claude-code-research-
 
 ## 8. 📦 安装与启动
 
-需要 Python 3.10+、macOS / Linux / Windows、[Herdr](https://herdr.dev)（默认）或[可选的 Orca Terminal v1 工作台](docs/ORCA.md)，以及配置好模型访问的所选原生 CLI（`codex`、`claude`、`agy`）。
+需要 Python 3.10+、macOS / Linux / Windows、[Herdr](https://herdr.dev)（默认）、[可选的 Orca Terminal v1 工作台](docs/ORCA.md)或[可选的 Rex 工作台](docs/REX.md)，以及配置好模型访问的所选原生 CLI（`codex`、`claude`、`agy`）。
 
 ```bash
 pipx install 'git+https://github.com/wanshuiyin/SuperARIS.git'
@@ -139,7 +142,7 @@ superaris
 superaris start /path/to/project --role main=agy --role engineer=claude --role writer=agy
 ```
 
-新 Orca 项目加 `--host orca`，各角色请求模型用 `--model ROLE=MODEL`。两个 AGY 角色是独立会话。CC 与 Orca AGY 后续收件仍通过可见通知；Herdr 中显式交给自动化的 AGY 可在已验证的空闲空输入框接续，Codex 自动化会话保留原有输入保护。
+新 Orca 或 Rex 项目加 `--host orca` 或 `--host rex`，各角色请求模型用 `--model ROLE=MODEL`。两个 AGY 角色是独立会话。CC 与 Orca AGY 后续收件仍通过可见通知；Herdr 与 Rex 中显式交给自动化的 AGY 可在已验证的空闲空输入框接续，Codex 自动化会话保留原有输入保护。
 
 新工作台采用相同的三窗格布局；已有团队和待完成启动保持原选择，`--only-role` 可明确选择子集。
 

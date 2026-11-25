@@ -7,13 +7,16 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 
 from .client import Herdr, HerdrError, foreground, startup_target_diagnostic, verify_owner
 from .context import prepare_context
 from .delivery import deliver
 from .state import directory, launch_lock, read, write
 from .dependencies import resolve_aris_repo
-from .hosts import client_for_binding, identity_present, selected_host
+from .hosts import client_for_binding, identity_present, new_role_placement, selected_host
+from .mathrsi import confirm_profile
+from .ui import mathrsi_role_label, tr
 
 
 def binding(project: Path) -> dict:
@@ -25,27 +28,7 @@ def save_binding(project: Path, value: dict) -> None:
 
 
 def confirm_research_profile(project: Path, plan: dict) -> dict | None:
-    """Freeze the confirmed mode while the caller holds the launch lock.
-
-    Re-read authoritative records here: a plan may predate another launch.
-    Selection and offline plans never call this mutation boundary.
-    """
-    from .mathrsi import resolve_profile
-    proposed = plan.get("research_profile")
-    saved = read(directory(project) / "research-profile.json", None)
-    current = binding(project)
-    if saved is not None:
-        if (proposed or {"profile": "aris"}) != saved:
-            raise ValueError("Research profile changed since this startup was planned; reopen the existing project")
-        return saved
-    if current and (proposed or {}).get("profile") == "mathrsi":
-        raise ValueError("Existing ARIS workbench cannot be converted to MathRSI; choose a new project")
-    if proposed is not None:
-        canonical = resolve_profile(project, proposed.get("profile"), proposed.get("repo"), proposed.get("plugin"))
-        if canonical != proposed:
-            raise ValueError("Research profile changed since this startup was planned; prepare it again")
-        write(directory(project) / "research-profile.json", canonical)
-    return proposed
+    return confirm_profile(project, plan.get("research_profile"), bound=bool(binding(project)))
 
 
 def verify_caller(client: Herdr, pane: str | None, native: str | None) -> None:
@@ -90,7 +73,7 @@ def _startup_target(client, operation: str, pane: str, kind: str, language: str)
     try:
         yield
     except HerdrError as exc:
-        if getattr(client, "host", None) != "orca":
+        if getattr(client, "host", None) not in {"orca", "rex"}:  # Herdr-only diagnostics.
             diagnostic = startup_target_diagnostic(client, exc, operation, pane, kind, language)
             if diagnostic is not None:
                 raise HerdrError(diagnostic) from exc
@@ -104,8 +87,8 @@ def start(plan: dict, args, *, stop_event=None) -> dict:
         profile = confirm_research_profile(project, plan)
         host = selected_host(old, plan.get("host"))
         seed = old or {"host": host, "session": plan["session"]}
-        client = client_for_binding(seed, project, args.herdr_bin,
-                                    orca_bin=getattr(args, "orca_bin", None), herdr_factory=Herdr)
+        client = client_for_binding(seed, project, args.herdr_bin, orca_bin=getattr(args, "orca_bin", None),
+                                    rex_bin=getattr(args, "rex_bin", None), herdr_factory=Herdr)
         if host == "herdr" and old and old["session"] != plan["session"]:
             raise ValueError(f"Project already bound to session {old['session']!r}; use that explicit session")
         aris_repo = resolve_aris_repo(getattr(args, "aris_repo", None) or os.environ.get("SUPERARIS_ARIS_REPO") or old.get("aris_repo"))
@@ -113,6 +96,11 @@ def start(plan: dict, args, *, stop_event=None) -> dict:
             client.ensure_startable(new=not old.get("roles"))
             if args.caller_pane or args.caller_native_session:
                 raise ValueError("Herdr caller identity cannot authorize an Orca terminal; use its explicit owner handle")
+        elif host == "rex":
+            # An unstarted team may pin a new local server; recorded blocks may not.
+            server = client.ensure_ready(new=not old.get("roles"))
+            if args.caller_pane or args.caller_native_session:
+                raise ValueError("Herdr caller identity cannot authorize a Rex block; use its explicit owner block")
         else:
             client.ensure(directory(project) / "server.log", install=not args.no_install)
             verify_caller(client, args.caller_pane, args.caller_native_session)
@@ -127,6 +115,10 @@ def start(plan: dict, args, *, stop_event=None) -> dict:
             workspace = client.ensure_workspace()
             current["worktree_selector"] = "id:" + workspace["worktreeId"]
             client.bound = current
+        elif host == "rex":
+            current.update(host="rex", rex_bin=client.binary, execution_environment="local", rex_server=server["endpoint"],
+                           rex_instance=server["instance_id"], rex_host=server["host_id"])
+            client.bind(current)
         if args.owner and "main" not in current["roles"]:
             if host == "orca":
                 terminal = client.terminal(args.owner)
@@ -134,6 +126,9 @@ def start(plan: dict, args, *, stop_event=None) -> dict:
                 if not kind:
                     raise HerdrError("Selected Orca owner is not a supported native terminal agent")
                 agent = {"pane_id": args.owner, "agent": kind}
+            elif host == "rex":
+                described = client.describe(args.owner)
+                agent = {"pane_id": args.owner, "agent": described["kind"]}
             else:
                 agent = client.json("agent", "get", args.owner)["agent"]
             candidate = {"pane_id": agent["pane_id"], "harness": agent["agent"],
@@ -217,8 +212,8 @@ def start(plan: dict, args, *, stop_event=None) -> dict:
             if role == "main" and collaborator_scopes:
                 inputs["excluded_scopes"] = [item["write_scope"] for item in collaborator_scopes]
             if existing:
-                if host == "orca" and not existing.get("pane_id"):
-                    raise HerdrError("Original Orca launch outcome is unknown; inspect its saved receipt and workspace before recovering this role")
+                if host in {"orca", "rex"} and not existing.get("pane_id"):
+                    raise HerdrError(f"Original {host.capitalize()} launch outcome is unknown; inspect its saved receipt and workspace before recovering this role")
                 with _startup_target(client, "agent get", existing["pane_id"], existing["harness"], language):
                     live = verify_owner(client, existing, project)
                 current["roles"][role] = live
@@ -228,10 +223,11 @@ def start(plan: dict, args, *, stop_event=None) -> dict:
                     continue
                 if existing.get("inputs") != inputs:
                     context = prepare_context(project, role, live["harness"], selected["task"], selected["skills"],
-                                              selected["recovery"], aris_repo, [selected["write_scope"]], **({"workbench_host": host} if host == "orca" else {}))
+                                              selected["recovery"], aris_repo, [selected["write_scope"]], **({"workbench_host": host} if host != "herdr" else {}))
                     _exclude_writers(context, role, collaborator_scopes)
                     live.update(context=context, inputs=inputs, pending_context=context["packet"],
                                 delivery={"phase": "prepared", "packet": context["packet"]})
+                    live.pop("bootstrap_pending", None)  # First-input permission belonged to the old packet.
                     current["roles"][role] = live
                     save_binding(project, current)
                     delivery = _submit_context(client, project, current, role)
@@ -248,15 +244,16 @@ def start(plan: dict, args, *, stop_event=None) -> dict:
                                         "pending_context": existing.get("pending_context"), "delivery": existing.get("delivery")})
                 current["roles"][role] = live
                 continue
-            if host == "herdr" and not shutil.which(kind):
+            if host in {"herdr", "rex"} and not shutil.which(kind):
                 if role == "main":
                     raise ValueError(f"Selected main harness is missing: {kind}; complete its native installation/login")
                 actions.append({"role": role, "action": "unavailable", "reason": f"missing {kind} CLI"})
                 continue
             Path(selected["write_scope"]).mkdir(parents=True, exist_ok=True)
             context = prepare_context(project, role, kind, selected["task"], selected["skills"],
-                                      selected["recovery"], aris_repo, [selected["write_scope"]], **({"workbench_host": host} if host == "orca" else {}))
+                                      selected["recovery"], aris_repo, [selected["write_scope"]], **({"workbench_host": host} if host != "herdr" else {}))
             _exclude_writers(context, role, collaborator_scopes)
+            harness_label = {"codex": "Codex", "claude": "Claude Code", "agy": "Antigravity"}[kind]
             if host == "orca":
                 record = {"host": "orca", "harness": kind, "created": True,
                           "automation_owned": args.automation_owned, "context": context,
@@ -304,71 +301,73 @@ def start(plan: dict, args, *, stop_event=None) -> dict:
                     raise
                 record = current["roles"][role]
                 if brand == "MathRSI" and hasattr(client, "rename_terminal"):
-                    from .ui import mathrsi_role_label
-                    title = "MathRSI · " + mathrsi_role_label(role, lang=language) + " · " + {
-                        "codex": "Codex", "claude": "Claude Code", "agy": "Antigravity"}[kind]
+                    title = f"{brand} · {mathrsi_role_label(role, lang=language)} · {harness_label}"
                     try:
                         record["title_receipt"] = client.rename_terminal(record["pane_id"], title)
                     except (HerdrError, OSError) as exc:
-                        # Cosmetic and new-only: an unsupported operation must
-                        # not alter the original native launch/readiness result.
+                        # A cosmetic failure leaves the native launch result intact.
                         record["title_warning"] = str(exc)
                 save_binding(project, current)
                 actions.append({"role": role, "action": "started", "pane_id": record["pane_id"],
                                 "packet": context["packet"], "launch_receipt": response})
                 continue
             ui_language = current.get("ui_language")
+            role_title, workbench_title = role, "Workbench"
             if ui_language in {"zh", "en"}:
-                from .ui import tr
                 role_title = tr({"main": "主会话", "engineer": "工程", "writer": "研究与写作"}.get(role, role), lang=ui_language)
                 workbench_title = tr("工作台", lang=ui_language)
-            else:
-                role_title, workbench_title = role, "Workbench"
             if brand == "MathRSI":
-                from .ui import mathrsi_role_label
-                role_title = mathrsi_role_label(role, lang=ui_language or "en")
-            if "workspace_id" not in current:
-                display_name = f"{brand} · {args.name}" if getattr(args, "name", None) else f"{brand} {project.name}"
-                created = client.json("workspace", "create", "--cwd", str(project), "--label", display_name,
-                                      "--env", f"ARIS_REPO={aris_repo}", "--no-focus")
-                current["workspace_id"] = created["workspace"]["workspace_id"]
-                tab = created["tab"]["tab_id"]
-                current["tab_id"] = tab
-                client.json("tab", "rename", tab, f"{brand} · {workbench_title}")
-                pane = created["root_pane"]["pane_id"]
+                role_title = mathrsi_role_label(role, lang=language)
+            display_name = f"{brand} · {args.name}" if getattr(args, "name", None) else f"{brand} {project.name}"
+            placement = new_role_placement(current, role, host)
+            if host == "rex":
+                pane, name = None, f"{role_title} · {harness_label}"
             else:
-                anchor = next(iter(current["roles"].values()), None)
-                if anchor and anchor.get("created"):
-                    # A new team gets a left owner and a right collaborator
-                    # column. Keep an adopted user's original topology intact.
-                    engineer = current["roles"].get("engineer")
-                    below_engineer = role == "writer" and engineer and engineer.get("created")
-                    split_from = engineer["pane_id"] if below_engineer else anchor["pane_id"]
-                    direction = "down" if below_engineer else "right"
-                    created = client.json("pane", "split", split_from, "--direction", direction, "--cwd", str(project), "--no-focus")
-                    pane = created["pane"]["pane_id"]
-                else:
+                if placement is None:
+                    created = client.json("workspace", "create", "--cwd", str(project), "--label", display_name,
+                                          "--env", f"ARIS_REPO={aris_repo}", "--no-focus")
+                    current["workspace_id"] = created["workspace"]["workspace_id"]
+                    tab = created["tab"]["tab_id"]
+                    current["tab_id"] = tab
+                    client.json("tab", "rename", tab, f"{brand} · {workbench_title}")
+                    pane = created["root_pane"]["pane_id"]
+                elif placement == "tab":
                     created = client.json("tab", "create", "--workspace", current["workspace_id"], "--cwd", str(project), "--label", f"{brand} · {role_title}", "--no-focus")
                     pane = created["root_pane"]["pane_id"]
-            harness_label = {"claude": "Claude Code", "codex": "Codex", "agy": "Antigravity"}[kind]
-            client.json("pane", "rename", pane, f"{role_title} · {harness_label}")
-            name = _agent_name(project, role, client.snapshot().get("agents", []))
+                else:
+                    split_from, direction = placement
+                    created = client.json("pane", "split", split_from, "--direction", direction, "--cwd", str(project), "--no-focus")
+                    pane = created["pane"]["pane_id"]
+                client.json("pane", "rename", pane, f"{role_title} · {harness_label}")
+                name = _agent_name(project, role, client.snapshot().get("agents", []))
             record = {"pane_id": pane, "harness": kind, "name": name, "created": True,
                       "automation_owned": args.automation_owned, "context": context,
                       "requested_model": selected["model"], "status": "starting", "inputs": inputs,
                       "bootstrap_pending": kind == "codex",
                       "pending_context": context["packet"], "delivery": {"phase": "prepared", "packet": context["packet"]}}
+            if host == "rex":
+                record.update(host="rex", launch_phase="attempting")
             current["roles"][role] = record
             save_binding(project, current)  # Retain delivery target before starting; never duplicate after timeout.
             try:
                 if kind != "codex":
                     record["delivery"]["phase"] = "attempting"
                     save_binding(project, current)
-                with _startup_target(client, "agent start", pane, kind, language):
-                    client.json("agent", "start", name, "--kind", kind, "--pane", pane, "--timeout", "120000", "--",
-                                *_native_args(kind, project, None if kind == "codex" else context["prompt"], selected["model"]), timeout=125)
-                with _startup_target(client, "agent get", pane, kind, language):
-                    current["roles"][role] = verify_owner(client, record, project)
+                native = _native_args(kind, project, None if kind == "codex" else context["prompt"], selected["model"])
+                if host == "rex":
+                    # Rex resolves relative commands in the project; pin the CLI checked above.
+                    record.update(client.launch_agent(current, placement, [os.path.abspath(shutil.which(kind)), *native], name,
+                                                      session_label=display_name, window_label=f"{brand} · {workbench_title}"),
+                                  launch_phase="launched")
+                    pane = record["pane_id"]
+                    save_binding(project, current)
+                    current["roles"][role] = client.wait_owner(record, project)
+                else:
+                    with _startup_target(client, "agent start", pane, kind, language):
+                        client.json("agent", "start", name, "--kind", kind, "--pane", pane, "--timeout", "120000", "--",
+                                    *native, timeout=125)
+                    with _startup_target(client, "agent get", pane, kind, language):
+                        current["roles"][role] = verify_owner(client, record, project)
                 if kind == "codex":
                     # Separate startup readiness from a potentially long first task.
                     # The brand-new pane has no earlier user input; still inspect its surface.
@@ -382,10 +381,14 @@ def start(plan: dict, args, *, stop_event=None) -> dict:
                     current["roles"][role]["initial_delivery"] = submitted
                 else:
                     current["roles"][role]["delivery"]["phase"] = "submitted"
-            except HerdrError:
+            except HerdrError as exc:
                 # The CLI may already have launched. Preserve the target and report the real failure.
                 if current["roles"][role]["delivery"]["phase"] == "attempting":
                     current["roles"][role]["delivery"]["phase"] = "unknown"
+                if current["roles"][role].get("launch_phase") == "attempting":
+                    output = getattr(exc, "output", "").strip()  # A launcher may print Rex's receipt, then fail.
+                    current["roles"][role].update(launch_phase="unknown", launch_error=str(exc),
+                                                  **({"launch_receipt": output} if output else {}))
                 save_binding(project, current)
                 raise
             save_binding(project, current)
@@ -399,7 +402,7 @@ def start(plan: dict, args, *, stop_event=None) -> dict:
             current.pop("pending_start", None)
         save_binding(project, current)
     return {"mode": "running", "project": str(project), "session": current["session"],
-            **({"host": "orca"} if host == "orca" else {}),
+            **({"host": host} if host != "herdr" else {}),
             "actions": actions, "roles": current["roles"], "acceptance": "not_evaluated"}
 
 
@@ -440,12 +443,14 @@ def control(project: Path, role: str, mode: str, binary: str) -> dict:
         if role not in current.get("roles", {}):
             raise ValueError("Unknown project role")
         client = client_for_binding(current, project, binary, herdr_factory=Herdr)
-        record = verify_owner(client, current["roles"][role], project)
-        record["automation_owned"] = mode == "automation"
-        if mode == "human":
-            record["bootstrap_pending"] = False
-        current["roles"][role] = record
-        save_binding(project, current)
+        from .delivery import input_turn
+        with input_turn(client, project):  # A Rex sender mid-turn finishes before this handoff returns.
+            record = verify_owner(client, current["roles"][role], project)
+            record["automation_owned"] = mode == "automation"
+            if mode == "human":
+                record["bootstrap_pending"] = False
+            current["roles"][role] = record
+            save_binding(project, current)
         return {"role": role, "mode": mode, "pane_id": record["pane_id"]}
 
 
@@ -454,25 +459,15 @@ def resolve_delivery(project: Path, args) -> dict:
     evidence = local(project, args.evidence)
     if not evidence.is_file():
         raise ValueError("Inspect actual input/receipt and provide its existing evidence file")
+    from .bridge import quiet_listener, resolve_attempt, role_attempt
+    handle = args.handle or role_attempt(project, args.role)  # The receiver's attempt is the same delivery.
+    if handle:
+        with quiet_listener(project), launch_lock(project):
+            return resolve_attempt(project, handle, args.resolution, evidence)
     with launch_lock(project):
-        if args.handle:
-            path = directory(project) / "bridge.json"
-            state = read(path, {})
-            attempt = state.get("attempts", {}).pop(args.handle, None)
-            if not attempt:
-                raise ValueError("No unknown bridge delivery for this handle")
-            state.setdefault("resolutions", []).append({**attempt, "resolution": args.resolution, "evidence": str(evidence)})
-            if args.resolution == "received":
-                state.setdefault("delivered", {})[args.handle] = {"signal": attempt["signal"], "pane_id": attempt["pane_id"], "delivery": "visible_notice"}
-                if "observed" in attempt["signal"]:
-                    from .tasks import handle_path
-                    pointer = handle_path(project, attempt["signal"]["id"])
-                    handle = read(pointer)
-                    if handle:
-                        handle.update(attempt["signal"]["observed"], last_delivery={"delivery": "received", "evidence": str(evidence)})
-                        write(pointer, handle)
-            write(path, state)
-            return {"handle": args.handle, "resolution": args.resolution, "evidence": str(evidence)}
+        if role_attempt(project, args.role) or role_attempt(project, args.role, "settles"):
+            # A receiver began delivering it, or its known outcome awaits this lock.
+            raise ValueError("A receiver is delivering this role's packet; rerun after it records an outcome")
         current = binding(project)
         role = current.get("roles", {}).get(args.role)
         if not role or not role.get("delivery"):
@@ -480,6 +475,7 @@ def resolve_delivery(project: Path, args) -> dict:
         role["delivery"].update(phase="received" if args.resolution == "received" else "prepared", evidence=str(evidence))
         if args.resolution == "received":
             role["pending_context"] = None
+            role.pop("bootstrap_pending", None)
         save_binding(project, current)
         return role["delivery"]
 
@@ -488,13 +484,16 @@ def attach(project: Path, binary: str = "herdr") -> int:
     info = binding(project)
     if not info:
         raise ValueError("No workbench binding for this project")
-    if selected_host(info) == "orca":
+    host = selected_host(info)
+    if host in {"orca", "rex"}:
         client = client_for_binding(info, project, binary, herdr_factory=Herdr)
         main = info.get("roles", {}).get("main")
         if not main:
-            raise ValueError("No recorded Orca main owner to reveal")
+            raise ValueError(f"No recorded {host.capitalize()} main owner to reveal")
         live = verify_owner(client, main, project)
-        client.open_ui(live["pane_id"])
+        opened = client.open_ui(live["pane_id"])
+        if host == "rex" and not opened.get("selected"):
+            print(f"Open Rex and select session {opened['rex_session']} ({opened['reason']}).", file=sys.stderr)
         return 0
     # Receiving was established independently by start(). Detaching this TUI
     # does not stop the original owner, worker or project receiver component.
